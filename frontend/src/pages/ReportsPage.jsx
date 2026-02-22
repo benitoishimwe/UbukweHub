@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLang } from '../contexts/LanguageContext';
 import { adminAPI, transactionAPI, eventsAPI, inventoryAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { BarChart3, Download, TrendingUp, Package, Calendar, ArrowLeftRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -8,23 +9,45 @@ const COLORS = ['#C9A84C', '#E8A4B8', '#4A7C59', '#6B8E9B', '#D9534F', '#D4A373'
 
 export default function ReportsPage() {
   const { t } = useLang();
+  const { user } = useAuth();
   const [stats, setStats] = useState({});
   const [txStats, setTxStats] = useState({});
   const [invStats, setInvStats] = useState({});
+  const [evStats, setEvStats] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const [aRes, tRes, iRes] = await Promise.allSettled([adminAPI.stats(), transactionAPI.stats(), inventoryAPI.stats()]);
-        setStats(aRes.status === 'fulfilled' ? aRes.value.data : {});
-        setTxStats(tRes.status === 'fulfilled' ? tRes.value.data : {});
-        setInvStats(iRes.status === 'fulfilled' ? iRes.value.data : {});
+        // Use accessible endpoints for all roles
+        const [tRes, iRes, eRes] = await Promise.allSettled([
+          transactionAPI.stats(), inventoryAPI.stats(), eventsAPI.stats()
+        ]);
+        const txData = tRes.status === 'fulfilled' ? tRes.value.data : {};
+        const invData = iRes.status === 'fulfilled' ? iRes.value.data : {};
+        const evData = eRes.status === 'fulfilled' ? eRes.value.data : {};
+        setTxStats(txData);
+        setInvStats(invData);
+        setEvStats(evData);
+        // Admin-only extended stats
+        if (user?.role === 'admin') {
+          const aRes = await adminAPI.stats().catch(() => ({ data: {} }));
+          setStats(aRes.data || {});
+        } else {
+          // Build stats from accessible endpoints for non-admin
+          setStats({
+            total_events: evData.total || 0,
+            total_inventory: invData.total || 0,
+            total_transactions: txData.total || 0,
+            total_users: 0,
+            users_by_role: {}
+          });
+        }
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     })();
-  }, []);
+  }, [user]);
 
   const txChartData = txStats.by_type ? Object.entries(txStats.by_type).map(([type, count]) => ({ type, count })) : [];
   const invCatData = invStats.categories || [];
