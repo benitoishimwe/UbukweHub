@@ -1,0 +1,155 @@
+{
+  "brand_identity": {
+    "name": "UbukweHub",
+    "tone": "Elegant, Organized, Airy, Culturally Grounded (Rwandan)",
+    "core_values": [
+      "Simplicity in Chaos (Wedding planning is chaotic; the app is calm)",
+      "Mobile-First Authority (Field staff are the primary power users)",
+      "Celebration of Detail (Inventory and scores matter)"
+    ],
+    "principles": [
+      "Lightness: No heavy dark backgrounds. Use whitespace and ivory.",
+      "Soft Geometry: rounded-2xl over sharp edges. Fluid motion.",
+      "Contrast for Clarity: Charcoal text on Ivory/Pink. No low-contrast grey on grey."
+    ]
+  },
+  "design_tokens": {
+    "colors": {
+      "primary": {
+        "DEFAULT": "#C9A84C",
+        "foreground": "#FFFFFF",
+        "dark": "#9A7D2E",
+        "light": "#E6C975"
+      },
+      "secondary": {
+        "DEFAULT": "#E8A4B8",
+        "foreground": "#2D2D2D",
+        "soft": "#FCEAF0"
+      },
+      "background": {
+        "DEFAULT": "#F5F0E8",
+        "paper": "#FFFFFF",
+        "subtle": "#EBE5DB"
+      },
+      "text": {
+        "primary": "#2D2D2D",
+        "secondary": "#5C5C5C",
+        "accent": "#C9A84C"
+      },
+      "status": {
+        "success": "#4A7c59",
+        "warning": "#D4A373",
+        "error": "#D9534F",
+        "info": "#6B8E9B"
+      }
+    },
+    "typography": {
+      "font_family": {
+        "heading": ["Playfair Display", "serif"],
+        "body": ["Manrope", "sans-serif"],
+        "mono": ["JetBrains Mono", "monospace"]
+      },
+      "scale": {
+        "h1": "text-4xl md:text-6xl font-medium tracking-tight",
+        "h2": "text-3xl md:text-5xl font-medium tracking-tight",
+        "h3": "text-2xl md:text-3xl font-medium",
+        "body_lg": "text-lg leading-relaxed",
+        "body": "text-base leading-relaxed"
+      }
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-12 lg:p-16",
+      "section_gap": "gap-12 md:gap-24",
+      "element_gap": "gap-4 md:gap-8"
+    },
+    "radius": {
+      "default": "rounded-xl",
+      "card": "rounded-2xl",
+      "button": "rounded-full"
+    },
+    "shadows": {
+      "card": "shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+      "floating": "shadow-[0_20px_40px_rgb(0,0,0,0.08)]",
+      "inner": "shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+    }
+  },
+  "component_strategies": {
+    "buttons": {
+      "primary": "bg-[#C9A84C] text-white hover:bg-[#B39340] rounded-full px-8 py-6 font-medium transition-transform active:scale-95 shadow-md",
+      "secondary": "bg-[#E8A4B8] text-[#2D2D2D] hover:bg-[#D995A9] rounded-full px-6 py-4 font-medium",
+      "outline": "border-2 border-[#C9A84C] text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-full px-6 py-4",
+      "ghost": "hover:bg-[#C9A84C]/10 text-[#2D2D2D] rounded-lg px-4 py-2"
+    },
+    "cards": {
+      "default": "bg-white border border-[#EBE5DB] rounded-2xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] p-6 hover:shadow-[0_10px_30px_-5px_rgba(0,0,0,0.08)] transition-all duration-300",
+      "highlight": "bg-[#FCEAF0] border border-[#E8A4B8]/30 rounded-2xl p-6"
+    },
+    "inputs": {
+      "default": "bg-white border-[#E0D8CC] focus:border-[#C9A84C] focus:ring-[#C9A84C]/20 rounded-lg h-12 text-base shadow-sm"
+    },
+    "navigation": {
+      "desktop": "Sticky glassmorphism header (bg-[#F5F0E8]/80 backdrop-blur-md) with centered logo and split navigation.",
+      "mobile": "Bottom navigation bar (fixed) with 4-5 key tabs (Home, Inventory, Scan, Shifts, Profile). Active state uses Soft Gold."
+    }
+  },
+  "layout_guidelines": {
+    "dashboard_grid": "Use a Bento-style grid. 12 columns on desktop. Cards should span cols to create asymmetry (e.g., Main Metric: col-span-8, Quick Actions: col-span-4).",
+    "mobile_first": "All interactive elements must be at least 44px height. Critical actions (Scan QR, Check-in) must be reachable with thumb.",
+    "whitespace": "Don't fear empty space. Use the Ivory background to let the content breathe. Minimum padding p-4 on mobile containers."
+  },
+  "image_assets": {
+    "hero_wedding": {
+      "url": "https://images.pexels.com/photos/18064219/pexels-photo-18064219.jpeg",
+      "alt": "Elegant Rwandan couple celebrating wedding",
+      "usage": "Landing page hero, Login background (with overlay)"
+    },
+    "inventory_chairs": {
+      "url": "https://images.pexels.com/photos/29568369/pexels-photo-29568369.jpeg",
+      "alt": "Elegant Chiavari chairs setup",
+      "usage": "Inventory module cover, Equipment category"
+    },
+    "inventory_decor": {
+      "url": "https://images.pexels.com/photos/14703670/pexels-photo-14703670.jpeg",
+      "alt": "Floral table decoration details",
+      "usage": "Decorations category, Event details page"
+    },
+    "staff_working": {
+      "url": "https://images.unsplash.com/photo-1693571109313-701c1929290f",
+      "alt": "Event planner working on tablet",
+      "usage": "Staff portal, About page, Shift management intro"
+    },
+    "team_portrait": {
+      "url": "https://images.pexels.com/photos/8761674/pexels-photo-8761674.jpeg",
+      "alt": "Professional diverse team",
+      "usage": "About Us, Vendor Portal welcome"
+    }
+  },
+  "functionality_ux_notes": {
+    "wedding_greatness_score": {
+      "visual": "Use a radial progress chart (Shadcn Chart). 0-100 scale. Colors: <40 (Red/Grey), 40-70 (Gold), >90 (Blush Pink + Confetti).",
+      "interaction": "Clicking the score breaks it down into sub-metrics (Venue, Catering, Decor, Vibe)."
+    },
+    "inventory_scanner": {
+      "ux": "Floating Action Button (FAB) with QR icon always visible on Inventory mobile view. Opens camera in modal.",
+      "feedback": "Instant haptic feedback on successful scan. Green border flash."
+    },
+    "staff_shifts": {
+      "visual": "Timeline view. Drag and drop blocks. Color coded by role (Waiter=Gold, Security=Charcoal, Coordinator=Pink).",
+      "mobile": "List view with 'Upcoming' and 'Active' tabs. Swipe to clock-in."
+    }
+  },
+  "instructions_to_main_agent": [
+    "INSTALL FONTS: Add 'Playfair Display' and 'Manrope' from Google Fonts in index.css.",
+    "THEME SETUP: Force Light Mode default. Do not implement dark mode toggle unless requested by user (Brand is strict on 'Light & Airy').",
+    "SHADCN MODS: Override default 'radius' to 0.75rem or 1rem. Change default 'primary' color in globals.css to #C9A84C.",
+    "ACCESSIBILITY: Ensure #C9A84C text is only used on dark backgrounds or large headings. On light backgrounds, use #9A7D2E for text readability.",
+    "TESTING: Add data-testid to all interactive elements (buttons, inputs, cards)."
+  ],
+  "universal_guidelines": [
+    "No gradients on text. Solid, readable colors.",
+    "Use glassmorphism for sticky headers (backdrop-blur-xl).",
+    "Animation: Use framer-motion for page transitions (fade + slide up).",
+    "Forms: Split long forms (Wedding Setup) into Steps (Wizard pattern).",
+    "Toast Notifications: Use Sonner. Position: Bottom-Center on Mobile, Bottom-Right on Desktop."
+  ]
+}
