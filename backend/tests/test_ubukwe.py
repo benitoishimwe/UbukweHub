@@ -192,7 +192,7 @@ class TestTransactions:
         item = items[0]
         payload = {
             "item_id": item["item_id"],
-            "transaction_type": "rent",
+            "type": "rent",
             "quantity": 1,
             "client_name": "TEST_Client",
             "notes": "Test transaction"
