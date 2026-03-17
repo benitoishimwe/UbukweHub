@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useLang } from '../contexts/LanguageContext';
 import { staffAPI } from '../services/api';
 import { Users, Plus, Search, Clock, Calendar, CheckCircle, User } from 'lucide-react';
+import PlannerBoard from '../components/planner/PlannerBoard';
+import OnboardingWizard from '../components/onboarding/OnboardingWizard';
 
 function StaffCard({ member }) {
   const initials = member.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -38,21 +40,7 @@ function StaffCard({ member }) {
   );
 }
 
-function ShiftCard({ shift }) {
-  const statusColors = { scheduled: 'bg-blue-100 text-blue-700', active: 'badge-active', completed: 'badge-completed', cancelled: 'bg-gray-100 text-gray-500' };
-  return (
-    <div className="flex items-center gap-4 p-4 border-b border-[#F5F0E8] last:border-0" data-testid="shift-row">
-      <div className="w-10 h-10 rounded-xl bg-[#C9A84C15] flex items-center justify-center flex-shrink-0">
-        <Clock size={20} className="text-[#C9A84C]" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-[#2D2D2D] text-sm">{shift.staff_name}</p>
-        <p className="text-xs text-[#5C5C5C]">{shift.role} · {shift.date} · {shift.start_time}–{shift.end_time}</p>
-      </div>
-      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${statusColors[shift.status] || ''}`}>{shift.status}</span>
-    </div>
-  );
-}
+
 
 function CreateShiftModal({ staff, onClose, onSave }) {
   const [form, setForm] = useState({ staff_id: '', event_id: '', role: '', date: '', start_time: '08:00', end_time: '20:00' });
@@ -72,30 +60,30 @@ function CreateShiftModal({ staff, onClose, onSave }) {
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-scale-in" data-testid="shift-modal">
         <div className="p-6 border-b border-[#EBE5DB]">
-          <h2 className="text-xl font-bold text-[#2D2D2D]" style={{fontFamily:'Playfair Display,serif'}}>Create Shift</h2>
+          <h2 className="text-xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>Create Shift</h2>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Staff Member</label>
-            <select className="input-wedding" value={form.staff_id} onChange={(e) => setForm({...form, staff_id: e.target.value})} required data-testid="shift-staff-select">
+            <select className="input-wedding" value={form.staff_id} onChange={(e) => setForm({ ...form, staff_id: e.target.value })} required data-testid="shift-staff-select">
               <option value="">Select staff...</option>
               {staff.map(s => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Role / Task</label>
-            <input className="input-wedding" placeholder="Event Coordinator" value={form.role} onChange={(e) => setForm({...form, role: e.target.value})} required data-testid="shift-role-input" />
+            <input className="input-wedding" placeholder="Event Coordinator" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} required data-testid="shift-role-input" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Date (dd/mm/yyyy)</label>
-              <input className="input-wedding" placeholder="15/03/2025" value={form.date} onChange={(e) => setForm({...form, date: e.target.value})} required data-testid="shift-date-input" />
+              <input className="input-wedding" placeholder="15/03/2025" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required data-testid="shift-date-input" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Start – End</label>
               <div className="flex gap-1">
-                <input className="input-wedding text-sm" type="time" value={form.start_time} onChange={(e) => setForm({...form, start_time: e.target.value})} />
-                <input className="input-wedding text-sm" type="time" value={form.end_time} onChange={(e) => setForm({...form, end_time: e.target.value})} />
+                <input className="input-wedding text-sm" type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
+                <input className="input-wedding text-sm" type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
               </div>
             </div>
           </div>
@@ -119,6 +107,7 @@ export default function StaffPage() {
   const [tab, setTab] = useState('staff');
   const [search, setSearch] = useState('');
   const [showShiftModal, setShowShiftModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -132,20 +121,36 @@ export default function StaffPage() {
     })();
   }, []);
 
+  const handleAssignmentChange = async (shiftId, staffId, staffName) => {
+    // Optimistic UI update
+    setShifts(prev => prev.map(s => s.shift_id === shiftId ? { ...s, staff_id: staffId, staff_name: staffName } : s));
+    try {
+      await staffAPI.updateShift(shiftId, { staff_id: staffId, staff_name: staffName });
+    } catch (e) {
+      console.error("Failed to assign staff", e);
+      // Optional: Refetch on failure
+    }
+  };
+
   const filtered = staff.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()) || s.email?.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{fontFamily:'Playfair Display,serif'}}>{t('staff.title')}</h1>
-        <button onClick={() => setShowShiftModal(true)} className="btn-gold px-5 py-2.5 flex items-center gap-2 text-sm" data-testid="new-shift-btn">
-          <Plus size={18} /> {t('staff.new_shift')}
-        </button>
+        <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>{t('staff.title')}</h1>
+        <div className="flex gap-2">
+          <button onClick={() => setShowOnboarding(true)} className="px-5 py-2 rounded-full border-2 border-[#C9A84C] text-[#C9A84C] font-semibold text-sm hover:bg-[#C9A84C10] flex items-center gap-2 transition-all" data-testid="onboard-staff-btn">
+            <User size={18} /> Onboard Staff
+          </button>
+          <button onClick={() => setShowShiftModal(true)} className="btn-gold px-5 py-2.5 flex items-center gap-2 text-sm" data-testid="new-shift-btn">
+            <Plus size={18} /> {t('staff.new_shift')}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white rounded-xl border border-[#EBE5DB] p-1 w-fit mb-6">
-        {[{key:'staff', label: t('staff.title'), icon: Users},{key:'shifts', label: t('staff.shifts'), icon: Calendar}].map(({key, label, icon: Icon}) => (
+        {[{ key: 'staff', label: t('staff.title'), icon: Users }, { key: 'shifts', label: t('staff.shifts'), icon: Calendar }].map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === key ? 'bg-[#C9A84C] text-white' : 'text-[#5C5C5C] hover:bg-[#F5F0E8]'}`} data-testid={`tab-${key}`}>
             <Icon size={16} />{label}
           </button>
@@ -160,7 +165,7 @@ export default function StaffPage() {
           </div>
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1,2,3].map(i => <div key={i} className="skeleton h-36 rounded-2xl" />)}
+              {[1, 2, 3].map(i => <div key={i} className="skeleton h-36 rounded-2xl" />)}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -169,19 +174,11 @@ export default function StaffPage() {
           )}
         </>
       ) : (
-        <div className="bg-white rounded-2xl border border-[#EBE5DB] overflow-hidden">
-          {shifts.length === 0 ? (
-            <div className="text-center py-12 text-[#5C5C5C]">
-              <Calendar size={40} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No shifts scheduled</p>
-            </div>
-          ) : (
-            shifts.map(s => <ShiftCard key={s.shift_id} shift={s} />)
-          )}
-        </div>
+        <PlannerBoard staffList={staff} shiftsList={shifts} onAssignmentChange={handleAssignmentChange} />
       )}
 
       {showShiftModal && <CreateShiftModal staff={staff} onClose={() => setShowShiftModal(false)} onSave={(s) => { setShifts([...shifts, s]); setShowShiftModal(false); }} />}
+      {showOnboarding && <OnboardingWizard onClose={() => setShowOnboarding(false)} onComplete={() => { setShowOnboarding(false); window.location.reload(); }} />}
     </div>
   );
 }

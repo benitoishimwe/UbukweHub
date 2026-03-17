@@ -1,12 +1,25 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional, List
 from datetime import datetime, timezone
+import qrcode
+from pathlib import Path
 
 from database import db
 from models import InventoryItem, InventoryItemCreate, InventoryItemUpdate, User
 from auth import get_current_user, require_role, log_audit
 
 router = APIRouter()
+
+QR_DIR = Path("public/qrcodes")
+QR_DIR.mkdir(parents=True, exist_ok=True)
+
+def generate_inventory_qr(item_id: str) -> str:
+    payload = f"https://ubukwehub.local/inventory/{item_id}"
+    qr = qrcode.make(payload)
+    file_name = f"{item_id}.png"
+    file_path = QR_DIR / file_name
+    qr.save(file_path)
+    return f"/public/qrcodes/{file_name}"
 
 
 @router.get("")
@@ -85,6 +98,10 @@ async def get_item(item_id: str, current_user: User = Depends(get_current_user))
 @router.post("")
 async def create_item(data: InventoryItemCreate, current_user: User = Depends(require_role("admin", "staff"))):
     item = InventoryItem(**data.model_dump(), available=data.quantity)
+    
+    qr_url = generate_inventory_qr(item.item_id)
+    item.qr_code = qr_url
+    
     await db.inventory.insert_one({**item.model_dump()})
     await log_audit(current_user, "create", "inventory", item.item_id, {"name": item.name})
     return item.model_dump()

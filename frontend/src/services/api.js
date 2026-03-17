@@ -74,6 +74,7 @@ export const eventsAPI = {
   update: (id, data) => api.put(`/events/${id}`, data),
   delete: (id) => api.delete(`/events/${id}`),
   stats: () => api.get('/events/stats'),
+  getReport: (id) => api.get(`/events/${id}/report`, { responseType: 'blob' }),
 };
 
 // Staff

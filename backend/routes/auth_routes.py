@@ -10,7 +10,7 @@ from models import User, UserCreate, UserLogin, EmailOTP, UserSession
 from auth import (
     hash_password, verify_password, create_access_token,
     generate_totp_secret, get_totp_uri, verify_totp_code,
-    generate_email_otp, get_current_user, log_audit
+    generate_email_otp, get_current_user, log_audit, send_otp_email_resend
 )
 
 router = APIRouter()
@@ -90,20 +90,26 @@ async def verify_mfa(data: MFAVerifyRequest, request: Request):
         if not verify_totp_code(user.mfa_secret, data.code):
             raise HTTPException(status_code=401, detail="Invalid TOTP code")
     elif data.method == "email_otp":
-        otp_doc = await db.email_otps.find_one(
-            {"user_id": data.user_id, "otp_code": data.code, "used": False},
-            {"_id": 0}
-        )
-        if not otp_doc:
+        otp_docs = await db.email_otps.find({"user_id": data.user_id, "used": False}).to_list(length=10)
+        
+        valid_doc = None
+        for doc in otp_docs:
+            if verify_password(data.code, doc["otp_code"]):
+                valid_doc = doc
+                break
+                
+        if not valid_doc:
             raise HTTPException(status_code=401, detail="Invalid OTP code")
-        expires = otp_doc["expires_at"]
+            
+        expires = valid_doc["expires_at"]
         if isinstance(expires, str):
             expires = datetime.fromisoformat(expires)
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         if expires < datetime.now(timezone.utc):
             raise HTTPException(status_code=401, detail="OTP expired")
-        await db.email_otps.update_one({"user_id": data.user_id, "otp_code": data.code}, {"$set": {"used": True}})
+            
+        await db.email_otps.update_one({"otp_id": valid_doc["otp_id"]}, {"$set": {"used": True}})
     else:
         raise HTTPException(status_code=400, detail="Invalid MFA method")
 
@@ -120,11 +126,14 @@ async def send_email_otp(body: dict):
     if not user_doc:
         raise HTTPException(status_code=404, detail="User not found")
     code = generate_email_otp()
+    hashed_code = hash_password(code)
     expires = datetime.now(timezone.utc) + timedelta(minutes=10)
-    otp = EmailOTP(user_id=user_id, otp_code=code, expires_at=expires)
+    otp = EmailOTP(user_id=user_id, otp_code=hashed_code, expires_at=expires)
     await db.email_otps.insert_one({**otp.model_dump()})
-    # In production, send via email. For demo, return code
-    return {"message": "OTP sent", "otp_code": code, "expires_in": "10 minutes"}
+    
+    send_otp_email_resend(user_doc["email"], code)
+    
+    return {"message": "OTP sent to your email", "expires_in": "10 minutes"}
 
 
 @router.get("/me")

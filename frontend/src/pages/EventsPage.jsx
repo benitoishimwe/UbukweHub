@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLang } from '../contexts/LanguageContext';
 import { eventsAPI } from '../services/api';
 import { Plus, Search, Calendar, Users, MapPin, Loader, ChevronDown } from 'lucide-react';
+import EventDetailModal from '../components/events/EventDetailModal';
 
 const STATUS_COLORS = {
   planning: 'badge-planning',
@@ -20,7 +21,7 @@ function EventCard({ event, onClick }) {
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-[#2D2D2D] text-base truncate" style={{fontFamily:'Playfair Display,serif'}}>{event.name}</h3>
+          <h3 className="font-bold text-[#2D2D2D] text-base truncate" style={{ fontFamily: 'Playfair Display,serif' }}>{event.name}</h3>
           <div className="flex items-center gap-1 text-[#5C5C5C] text-xs mt-1">
             <MapPin size={12} />{event.venue}
           </div>
@@ -44,7 +45,7 @@ function EventCard({ event, onClick }) {
               }}
             />
           </div>
-          <span className="text-xs font-bold" style={{color: score >= 80 ? '#4A7C59' : score >= 60 ? '#C9A84C' : '#D9534F'}}>
+          <span className="text-xs font-bold" style={{ color: score >= 80 ? '#4A7C59' : score >= 60 ? '#C9A84C' : '#D9534F' }}>
             {score}%
           </span>
         </div>
@@ -80,33 +81,33 @@ function EventFormModal({ onClose, onSave }) {
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg animate-scale-in" data-testid="event-modal">
         <div className="p-6 border-b border-[#EBE5DB]">
-          <h2 className="text-xl font-bold text-[#2D2D2D]" style={{fontFamily:'Playfair Display,serif'}}>{t('events.new_event')}</h2>
+          <h2 className="text-xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>{t('events.new_event')}</h2>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.event_name')}</label>
-              <input className="input-wedding" placeholder="Uwase & Nkurunziza Wedding" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required data-testid="event-name-input" />
+              <input className="input-wedding" placeholder="Uwase & Nkurunziza Wedding" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required data-testid="event-name-input" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.event_date')}</label>
-              <input className="input-wedding" placeholder="dd/mm/yyyy" value={form.event_date} onChange={(e) => setForm({...form, event_date: e.target.value})} required data-testid="event-date-input" />
+              <input className="input-wedding" placeholder="dd/mm/yyyy" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} required data-testid="event-date-input" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.venue')}</label>
-              <input className="input-wedding" placeholder="Kigali Serena Hotel" value={form.venue} onChange={(e) => setForm({...form, venue: e.target.value})} required data-testid="event-venue-input" />
+              <input className="input-wedding" placeholder="Kigali Serena Hotel" value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} required data-testid="event-venue-input" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.client')}</label>
-              <input className="input-wedding" placeholder="Client name" value={form.client_name} onChange={(e) => setForm({...form, client_name: e.target.value})} data-testid="event-client-input" />
+              <input className="input-wedding" placeholder="Client name" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} data-testid="event-client-input" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.guests')}</label>
-              <input className="input-wedding" type="number" placeholder="200" value={form.guest_count} onChange={(e) => setForm({...form, guest_count: e.target.value})} data-testid="event-guests-input" />
+              <input className="input-wedding" type="number" placeholder="200" value={form.guest_count} onChange={(e) => setForm({ ...form, guest_count: e.target.value })} data-testid="event-guests-input" />
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.budget')}</label>
-              <input className="input-wedding" type="number" placeholder="10000000" value={form.budget} onChange={(e) => setForm({...form, budget: e.target.value})} data-testid="event-budget-input" />
+              <input className="input-wedding" type="number" placeholder="10000000" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} data-testid="event-budget-input" />
             </div>
           </div>
           {error && <p className="text-sm text-[#D9534F]" data-testid="event-error">{error}</p>}
@@ -151,7 +152,7 @@ export default function EventsPage() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{fontFamily:'Playfair Display,serif'}}>{t('events.title')}</h1>
+        <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>{t('events.title')}</h1>
         <button onClick={() => setShowModal(true)} className="btn-gold px-5 py-2.5 flex items-center gap-2 text-sm" data-testid="new-event-btn">
           <Plus size={18} /> {t('events.new_event')}
         </button>
@@ -185,7 +186,7 @@ export default function EventsPage() {
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1,2,3].map(i => <div key={i} className="skeleton h-40 rounded-2xl" />)}
+          {[1, 2, 3].map(i => <div key={i} className="skeleton h-40 rounded-2xl" />)}
         </div>
       ) : events.length === 0 ? (
         <div className="text-center py-16 text-[#5C5C5C]">
@@ -203,6 +204,9 @@ export default function EventsPage() {
 
       {showModal && (
         <EventFormModal onClose={() => setShowModal(false)} onSave={(ev) => { setEvents([ev, ...events]); setShowModal(false); }} />
+      )}
+      {selectedEvent && (
+        <EventDetailModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
       )}
     </div>
   );

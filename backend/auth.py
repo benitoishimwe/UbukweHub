@@ -6,12 +6,14 @@ from passlib.context import CryptContext
 import pyotp
 import random
 import os
+import resend
 from database import db
 from models import User
 
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "ubukwe-hub-secret-key-2025-rwanda-weddings")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7 days
+resend.api_key = "re_Yn4R8zPj_FVPH6mj2hhCpcWKMfKtFkQAW"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -53,6 +55,19 @@ def verify_totp_code(secret: str, code: str) -> bool:
 
 def generate_email_otp() -> str:
     return str(random.randint(100000, 999999))
+
+
+def send_otp_email_resend(email: str, plain_otp: str):
+    params = {
+        "from": "UbukweHub Security <onboarding@resend.dev>",
+        "to": [email],
+        "subject": "Your UbukweHub Login OTP",
+        "html": f"<strong>Your verification code is: {plain_otp}</strong>. It expires in 10 minutes."
+    }
+    try:
+        resend.Emails.send(params)
+    except Exception as e:
+        print(f"Failed to send email to {email}: {e}")
 
 
 async def get_current_user(request: Request) -> User:

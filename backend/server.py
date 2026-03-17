@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from pathlib import Path
 import os
@@ -26,6 +27,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+os.makedirs("public", exist_ok=True)
+app.mount("/public", StaticFiles(directory="public"), name="public")
 
 api_router = APIRouter(prefix="/api")
 
