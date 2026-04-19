@@ -56,6 +56,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/stripe/webhook", "/api/paystack/webhook").permitAll()
                 // Static files
                 .requestMatchers("/public/**").permitAll()
+                // Public album upload endpoints (token-protected at application level)
+                .requestMatchers(HttpMethod.GET, "/api/upload/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/upload/**").permitAll()
                 // Health check
                 .requestMatchers("/api/health", "/api/").permitAll()
                 // Everything else requires authentication

@@ -4,13 +4,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLang } from '../contexts/LanguageContext';
 import {
   LayoutDashboard, Calendar, Package, ArrowLeftRight, Users, Store,
-  BarChart3, ShieldCheck, Sparkles, Settings, LogOut, Menu, X, Bell, Globe, CreditCard
+  BarChart3, ShieldCheck, Sparkles, Settings, LogOut, Menu, X, Bell, Globe, CreditCard, Heart
 } from 'lucide-react';
 
 const navItems = (t, role) => {
   const items = [
     { path: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
     { path: '/events', label: t('nav.events'), icon: Calendar },
+    { path: '/planner', label: 'Planner', icon: Heart },
     { path: '/inventory', label: t('nav.inventory'), icon: Package },
     { path: '/transactions', label: t('nav.transactions'), icon: ArrowLeftRight },
     { path: '/staff', label: t('nav.staff'), icon: Users },

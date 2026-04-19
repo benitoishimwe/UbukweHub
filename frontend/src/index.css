@@ -120,6 +120,19 @@ h1, h2, h3 {
 .badge-active { background: #E8F5EE; color: #2E7D32; }
 .badge-completed { background: #E8EAF6; color: #3949AB; }
 
+/* ── FORM INPUT ── */
+.input-field {
+  width: 100%;
+  border: 1px solid #EBE5DB;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: box-shadow 0.15s;
+  background: white;
+}
+.input-field:focus { box-shadow: 0 0 0 2px #C9A84C40; }
+
 /* ── GLASSMORPHISM HEADER ── */
 .glass-header {
   background: rgba(245, 240, 232, 0.85);

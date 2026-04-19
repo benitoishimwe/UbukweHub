@@ -18,6 +18,9 @@ import AIAssistantPage from './pages/AIAssistantPage';
 import ReportsPage from './pages/ReportsPage';
 import PricingPage from './pages/PricingPage';
 import SettingsPage from './pages/SettingsPage';
+import AlbumGalleryPage from './pages/AlbumGalleryPage';
+import GuestUploadPage from './pages/GuestUploadPage';
+import PlannerPage from './pages/PlannerPage';
 import { registerServiceWorker } from './services/offline';
 import './App.css';
 
@@ -45,6 +48,10 @@ function AppRouter() {
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><Layout><AdminPage /></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Layout><SettingsPage /></Layout></ProtectedRoute>} />
       <Route path="/pricing" element={<ProtectedRoute><Layout><PricingPage /></Layout></ProtectedRoute>} />
+      <Route path="/events/:eventId/album" element={<ProtectedRoute><Layout><AlbumGalleryPage /></Layout></ProtectedRoute>} />
+      <Route path="/planner" element={<ProtectedRoute><Layout><PlannerPage /></Layout></ProtectedRoute>} />
+      {/* Public guest upload — no auth required */}
+      <Route path="/upload/:token" element={<GuestUploadPage />} />
       <Route path="*" element={<ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>} />
     </Routes>
   );

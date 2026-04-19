@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLang } from '../../contexts/LanguageContext';
 import { eventsAPI, staffAPI, vendorsAPI } from '../../services/api';
-import { X, FileText, Loader, Users, LayoutList } from 'lucide-react';
+import { X, FileText, Loader, Users, LayoutList, Camera } from 'lucide-react';
 
 export default function EventDetailModal({ event, onClose }) {
     const { t } = useLang();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [details, setDetails] = useState(null);
     const [allStaff, setAllStaff] = useState([]);
@@ -99,6 +101,12 @@ export default function EventDetailModal({ event, onClose }) {
                         <p className="text-sm text-[#5C5C5C] mt-1">{details.event_date} · {details.venue}</p>
                     </div>
                     <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => { onClose(); navigate(`/events/${event.event_id}/album`); }}
+                            className="px-4 py-2 flex items-center gap-2 text-sm rounded-xl bg-[#C9A84C15] text-[#C9A84C] font-semibold hover:bg-[#C9A84C25] transition-colors"
+                        >
+                            <Camera size={16} /> Live Album
+                        </button>
                         <button onClick={handleDownloadReport} className="btn-gold px-4 py-2 flex items-center gap-2 text-sm">
                             <FileText size={16} /> Export PDF
                         </button>
