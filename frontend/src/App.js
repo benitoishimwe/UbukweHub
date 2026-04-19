@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
@@ -15,6 +16,7 @@ import VendorsPage from './pages/VendorsPage';
 import AdminPage from './pages/AdminPage';
 import AIAssistantPage from './pages/AIAssistantPage';
 import ReportsPage from './pages/ReportsPage';
+import PricingPage from './pages/PricingPage';
 import SettingsPage from './pages/SettingsPage';
 import { registerServiceWorker } from './services/offline';
 import './App.css';
@@ -42,6 +44,7 @@ function AppRouter() {
       <Route path="/reports" element={<ProtectedRoute><Layout><ReportsPage /></Layout></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><Layout><AdminPage /></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Layout><SettingsPage /></Layout></ProtectedRoute>} />
+      <Route path="/pricing" element={<ProtectedRoute><Layout><PricingPage /></Layout></ProtectedRoute>} />
       <Route path="*" element={<ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>} />
     </Routes>
   );
@@ -51,9 +54,11 @@ export default function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <AppRouter />
-        </BrowserRouter>
+        <SubscriptionProvider>
+          <BrowserRouter>
+            <AppRouter />
+          </BrowserRouter>
+        </SubscriptionProvider>
       </AuthProvider>
     </LanguageProvider>
   );

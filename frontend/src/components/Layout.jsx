@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLang } from '../contexts/LanguageContext';
 import {
   LayoutDashboard, Calendar, Package, ArrowLeftRight, Users, Store,
-  BarChart3, ShieldCheck, Sparkles, Settings, LogOut, Menu, X, Bell, Globe
+  BarChart3, ShieldCheck, Sparkles, Settings, LogOut, Menu, X, Bell, Globe, CreditCard
 } from 'lucide-react';
 
 const navItems = (t, role) => {
@@ -17,6 +17,7 @@ const navItems = (t, role) => {
     { path: '/vendors', label: t('nav.vendors'), icon: Store },
     { path: '/ai', label: t('nav.ai'), icon: Sparkles },
     { path: '/reports', label: t('nav.reports'), icon: BarChart3 },
+    { path: '/pricing', label: 'Pricing', icon: CreditCard },
   ];
   if (role === 'admin') {
     items.push({ path: '/admin', label: t('nav.admin'), icon: ShieldCheck });
