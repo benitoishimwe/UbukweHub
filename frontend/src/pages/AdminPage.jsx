@@ -1,10 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import { useLang } from '../contexts/LanguageContext';
 import { adminAPI } from '../services/api';
-import { ShieldCheck, Users, FileText, Search, Loader, CheckCircle, XCircle, Trash2, Plus } from 'lucide-react';
+import { ShieldCheck, Users, FileText, Search, Loader, CheckCircle, XCircle, Trash2, Plus, ChevronDown } from 'lucide-react';
+
+const ROLES = ['client', 'vendor', 'staff', 'admin'];
+const roleColors = {
+  admin: 'bg-[#FBE9E7] text-[#BF360C]',
+  staff: 'bg-[#E8F5EE] text-[#4A7C59]',
+  client: 'bg-[#E3F2FD] text-[#1565C0]',
+  vendor: 'bg-[#FFF8E1] text-[#C9A84C]',
+};
 
 function UserRow({ user, onUpdate, onDelete }) {
-  const roleColors = { admin: 'bg-[#FBE9E7] text-[#BF360C]', staff: 'bg-[#E8F5EE] text-[#4A7C59]', client: 'bg-[#E3F2FD] text-[#1565C0]' };
+  const [changing, setChanging] = useState(false);
+  const [roleOpen, setRoleOpen] = useState(false);
+
+  const handleRoleChange = async (newRole) => {
+    if (newRole === user.role) { setRoleOpen(false); return; }
+    setChanging(true);
+    setRoleOpen(false);
+    try {
+      const { data } = await adminAPI.updateUser(user.user_id, { role: newRole });
+      onUpdate({ ...user, role: data.role ?? newRole });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setChanging(false);
+    }
+  };
+
   return (
     <div className="flex items-center gap-4 px-4 py-3 border-b border-[#F5F0E8] last:border-0 hover:bg-[#F5F0E8]" data-testid="user-row">
       <div className="w-9 h-9 rounded-full bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
@@ -14,7 +38,34 @@ function UserRow({ user, onUpdate, onDelete }) {
         <p className="font-semibold text-sm text-[#2D2D2D] truncate">{user.name}</p>
         <p className="text-xs text-[#5C5C5C] truncate">{user.email}</p>
       </div>
-      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${roleColors[user.role] || 'bg-gray-100 text-gray-600'}`}>{user.role}</span>
+
+      {/* Role badge — click to open dropdown */}
+      <div className="relative">
+        <button
+          onClick={() => setRoleOpen(!roleOpen)}
+          disabled={changing}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold capitalize transition-opacity ${roleColors[user.role] || 'bg-gray-100 text-gray-600'} ${changing ? 'opacity-50' : 'hover:opacity-80'}`}
+          data-testid={`role-btn-${user.user_id}`}
+        >
+          {changing ? <Loader size={11} className="animate-spin" /> : user.role}
+          <ChevronDown size={11} />
+        </button>
+        {roleOpen && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-[#EBE5DB] rounded-xl shadow-lg z-20 overflow-hidden w-28" data-testid={`role-dropdown-${user.user_id}`}>
+            {ROLES.map(r => (
+              <button
+                key={r}
+                onClick={() => handleRoleChange(r)}
+                className={`w-full text-left px-3 py-2 text-xs font-medium capitalize hover:bg-[#F5F0E8] transition-colors ${r === user.role ? 'text-[#C9A84C] font-semibold' : 'text-[#2D2D2D]'}`}
+                data-testid={`role-option-${r}`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center gap-1">
         {user.is_active ? <CheckCircle size={16} className="text-[#4A7C59]" /> : <XCircle size={16} className="text-[#D9534F]" />}
       </div>
@@ -55,7 +106,7 @@ function AddUserModal({ onClose, onSave }) {
       const { data } = await adminAPI.createUser(form);
       onSave(data);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create user');
+      setError(err.response?.data?.error || err.response?.data?.detail || 'Failed to create user');
     } finally {
       setLoading(false);
     }
@@ -83,9 +134,10 @@ function AddUserModal({ onClose, onSave }) {
           <div>
             <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Role</label>
             <select className="input-wedding" value={form.role} onChange={(e) => setForm({...form, role: e.target.value})} data-testid="new-user-role">
+              <option value="client">Client</option>
+              <option value="vendor">Vendor</option>
               <option value="staff">Staff</option>
               <option value="admin">Admin</option>
-              <option value="client">Client</option>
             </select>
           </div>
           {error && <p className="text-sm text-[#D9534F]" data-testid="create-user-error">{error}</p>}
@@ -131,6 +183,10 @@ export default function AdminPage() {
       await adminAPI.deleteUser(userId);
       setUsers(users.filter(u => u.user_id !== userId));
     } catch (e) { console.error(e); }
+  };
+
+  const handleUpdateUser = (updated) => {
+    setUsers(users.map(u => u.user_id === updated.user_id ? updated : u));
   };
 
   const filteredUsers = users.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase()));
@@ -184,7 +240,7 @@ export default function AdminPage() {
           {loading ? (
             <div className="p-4 space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-12 rounded-lg" />)}</div>
           ) : (
-            filteredUsers.map(u => <UserRow key={u.user_id} user={u} onUpdate={() => {}} onDelete={handleDeleteUser} />)
+            filteredUsers.map(u => <UserRow key={u.user_id} user={u} onUpdate={handleUpdateUser} onDelete={handleDeleteUser} />)
           )}
         </div>
       ) : (

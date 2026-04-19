@@ -46,7 +46,7 @@ export default function LoginPage() {
         }
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'An error occurred');
+      setError(err.response?.data?.error || err.response?.data?.detail || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ export default function LoginPage() {
       login(data.user, data.token);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid code');
+      setError(err.response?.data?.error || err.response?.data?.detail || 'Invalid code');
     } finally {
       setLoading(false);
     }
