@@ -1,13 +1,18 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import AuthCallback from './pages/AuthCallback';
 import DashboardPage from './pages/DashboardPage';
+import StaffDashboard from './pages/StaffDashboard';
+import ClientDashboard from './pages/ClientDashboard';
+import VendorDashboard from './pages/VendorDashboard';
+import EventManagerDashboard from './pages/EventManagerDashboard';
 import EventsPage from './pages/EventsPage';
 import InventoryPage from './pages/InventoryPage';
 import TransactionsPage from './pages/TransactionsPage';
@@ -21,38 +26,92 @@ import SettingsPage from './pages/SettingsPage';
 import AlbumGalleryPage from './pages/AlbumGalleryPage';
 import GuestUploadPage from './pages/GuestUploadPage';
 import PlannerPage from './pages/PlannerPage';
+import SaveTheDatePage from './pages/SaveTheDatePage';
+import MarketplacePage from './pages/MarketplacePage';
+import VendorProfilePage from './pages/VendorProfilePage';
+import AcceptInvitationPage from './pages/AcceptInvitationPage';
+import OnboardingWizardPage from './pages/OnboardingWizardPage';
+import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
+import TenantsPage from './pages/super-admin/TenantsPage';
+import TenantDetailsPage from './pages/super-admin/TenantDetailsPage';
+import AuditLogsPage from './pages/super-admin/AuditLogsPage';
+import { Toaster } from 'sonner';
 import { registerServiceWorker } from './services/offline';
 import './App.css';
 
 registerServiceWorker();
 
+const Wrap = ({ children }) => (
+  <ProtectedRoute><Layout>{children}</Layout></ProtectedRoute>
+);
+
+/** Routes to the role-specific dashboard component. */
+function DashboardGate() {
+  const { isStaff, isClient, isVendor, isEventManager } = useAuth();
+  if (isVendor)       return <VendorDashboard />;
+  if (isStaff)        return <StaffDashboard />;
+  if (isClient)       return <ClientDashboard />;
+  if (isEventManager) return <EventManagerDashboard />;
+  return <DashboardPage />;
+}
+
 function AppRouter() {
   const location = useLocation();
-  // Detect session_id synchronously before any route renders
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
   }
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route path="/" element={<ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>} />
-      <Route path="/events" element={<ProtectedRoute><Layout><EventsPage /></Layout></ProtectedRoute>} />
-      <Route path="/inventory" element={<ProtectedRoute><Layout><InventoryPage /></Layout></ProtectedRoute>} />
-      <Route path="/transactions" element={<ProtectedRoute><Layout><TransactionsPage /></Layout></ProtectedRoute>} />
-      <Route path="/staff" element={<ProtectedRoute><Layout><StaffPage /></Layout></ProtectedRoute>} />
-      <Route path="/vendors" element={<ProtectedRoute><Layout><VendorsPage /></Layout></ProtectedRoute>} />
-      <Route path="/ai" element={<ProtectedRoute><Layout><AIAssistantPage /></Layout></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute><Layout><ReportsPage /></Layout></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute roles={['admin']}><Layout><AdminPage /></Layout></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Layout><SettingsPage /></Layout></ProtectedRoute>} />
-      <Route path="/pricing" element={<ProtectedRoute><Layout><PricingPage /></Layout></ProtectedRoute>} />
-      <Route path="/events/:eventId/album" element={<ProtectedRoute><Layout><AlbumGalleryPage /></Layout></ProtectedRoute>} />
-      <Route path="/planner" element={<ProtectedRoute><Layout><PlannerPage /></Layout></ProtectedRoute>} />
-      {/* Public guest upload — no auth required */}
-      <Route path="/upload/:token" element={<GuestUploadPage />} />
-      <Route path="*" element={<ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>} />
+      {/* Public pages */}
+      <Route path="/"                   element={<LandingPage />} />
+      <Route path="/login"              element={<LoginPage />} />
+      <Route path="/auth/callback"      element={<AuthCallback />} />
+      <Route path="/upload/:token"      element={<GuestUploadPage />} />
+      <Route path="/accept-invitation"  element={<AcceptInvitationPage />} />
+      <Route path="/marketplace"        element={<MarketplacePage />} />
+
+      {/* Onboarding */}
+      <Route path="/onboarding" element={<ProtectedRoute><OnboardingWizardPage /></ProtectedRoute>} />
+
+      {/* Authenticated app */}
+      <Route path="/dashboard"          element={<Wrap><DashboardGate /></Wrap>} />
+      <Route path="/events"             element={<Wrap><EventsPage /></Wrap>} />
+      <Route path="/inventory"          element={<Wrap><InventoryPage /></Wrap>} />
+      <Route path="/transactions"       element={<Wrap><TransactionsPage /></Wrap>} />
+      <Route path="/staff"              element={<Wrap><StaffPage /></Wrap>} />
+      <Route path="/vendors"            element={<Wrap><VendorsPage /></Wrap>} />
+      <Route path="/ai"                 element={<Wrap><AIAssistantPage /></Wrap>} />
+      <Route path="/reports"            element={<Wrap><ReportsPage /></Wrap>} />
+      <Route path="/settings"           element={<Wrap><SettingsPage /></Wrap>} />
+      <Route path="/pricing"            element={<Wrap><PricingPage /></Wrap>} />
+      <Route path="/planner"            element={<Wrap><PlannerPage /></Wrap>} />
+      <Route path="/save-the-date"      element={<Wrap><SaveTheDatePage /></Wrap>} />
+      <Route path="/vendor-profile"     element={<Wrap><VendorProfilePage /></Wrap>} />
+      <Route path="/events/:eventId/album" element={<Wrap><AlbumGalleryPage /></Wrap>} />
+
+      {/* Admin */}
+      <Route path="/admin" element={
+        <ProtectedRoute roles={['tenant_admin', 'super_admin', 'event_manager']}>
+          <Layout><AdminPage /></Layout>
+        </ProtectedRoute>
+      } />
+
+      {/* Super admin */}
+      <Route path="/super-admin" element={
+        <ProtectedRoute roles={['super_admin']}><SuperAdminDashboard /></ProtectedRoute>
+      } />
+      <Route path="/super-admin/tenants" element={
+        <ProtectedRoute roles={['super_admin']}><SuperAdminDashboard><TenantsPage /></SuperAdminDashboard></ProtectedRoute>
+      } />
+      <Route path="/super-admin/tenants/:tenantId" element={
+        <ProtectedRoute roles={['super_admin']}><SuperAdminDashboard><TenantDetailsPage /></SuperAdminDashboard></ProtectedRoute>
+      } />
+      <Route path="/super-admin/audit-logs" element={
+        <ProtectedRoute roles={['super_admin']}><SuperAdminDashboard><AuditLogsPage /></SuperAdminDashboard></ProtectedRoute>
+      } />
+
+      {/* Catch-all: authenticated users go to dashboard */}
+      <Route path="*" element={<Wrap><DashboardGate /></Wrap>} />
     </Routes>
   );
 }
@@ -64,6 +123,7 @@ export default function App() {
         <SubscriptionProvider>
           <BrowserRouter>
             <AppRouter />
+            <Toaster position="top-right" richColors closeButton />
           </BrowserRouter>
         </SubscriptionProvider>
       </AuthProvider>

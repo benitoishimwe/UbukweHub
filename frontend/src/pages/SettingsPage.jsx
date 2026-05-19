@@ -165,9 +165,9 @@ export default function SettingsPage() {
 
       {/* App Info */}
       <div className="text-center py-4 text-[#5C5C5C] text-xs">
-        <p className="font-semibold" style={{fontFamily:'Playfair Display,serif'}}>UbukweHub v1.0</p>
-        <p>Rwanda Wedding Planning Platform</p>
-        <p>© 2025 UbukweHub · All rights reserved</p>
+        <p className="font-semibold" style={{fontFamily:'Playfair Display,serif'}}>Prani v2.0</p>
+        <p>Event Planning Platform</p>
+        <p>© 2026 Prani · All rights reserved</p>
       </div>
     </div>
   );

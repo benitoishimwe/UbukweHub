@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { adminAPI } from '../../services/api';
-import { Check, ChevronLeft, ChevronRight, X, Upload } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, X, Upload, FileText, Trash2 } from 'lucide-react';
 
 export default function OnboardingWizard({ onClose, onComplete }) {
     const [step, setStep] = useState(1);
@@ -11,10 +11,12 @@ export default function OnboardingWizard({ onClose, onComplete }) {
         role: 'staff',
         skills: [],
         availability: '',
-        documentUploaded: false
+        documents: [],
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [dragging, setDragging] = useState(false);
+    const fileInputRef = useRef();
 
     const [currentSkill, setCurrentSkill] = useState('');
 
@@ -36,28 +38,43 @@ export default function OnboardingWizard({ onClose, onComplete }) {
         setFormData({ ...formData, skills: formData.skills.filter(s => s !== skill) });
     };
 
+    const addFiles = (newFiles) => {
+        const added = Array.from(newFiles).filter(f =>
+            !formData.documents.find(d => d.name === f.name && d.size === f.size)
+        );
+        setFormData(prev => ({ ...prev, documents: [...prev.documents, ...added] }));
+    };
+
+    const removeFile = (idx) => {
+        setFormData(prev => ({ ...prev, documents: prev.documents.filter((_, i) => i !== idx) }));
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setDragging(false);
+        addFiles(e.dataTransfer.files);
+    };
+
     const handleSubmit = async () => {
         setLoading(true);
         setError(null);
         try {
-            // 1. Create User
             const createRes = await adminAPI.createUser({
                 name: formData.name,
                 email: formData.email,
                 password: formData.password,
-                role: formData.role
+                role: formData.role,
             });
-            const userId = createRes.data.user_id;
+            const userId = createRes.data.userId || createRes.data.user_id;
 
-            // 2. Update additional info
             await adminAPI.updateUser(userId, {
                 skills: formData.skills,
-                availability: formData.availability
+                availability: formData.availability,
             });
 
             onComplete();
         } catch (err) {
-            setError(err.response?.data?.detail || "Failed to onboard staff");
+            setError(err.response?.data?.message || err.response?.data?.detail || 'Failed to onboard staff');
         } finally {
             setLoading(false);
         }
@@ -144,23 +161,58 @@ export default function OnboardingWizard({ onClose, onComplete }) {
                     {step === 4 && (
                         <div className="space-y-4 animate-fade-in">
                             <h3 className="text-lg font-bold text-[#2D2D2D]">Required Documents</h3>
-                            <p className="text-sm text-[#5C5C5C]">Upload any necessary identity or certification documents (Simulated).</p>
-                            <div className={`mt-4 border-2 border-dashed ${formData.documentUploaded ? 'border-[#4A7C59] bg-[#E8F5EE]' : 'border-[#CCCCCC] bg-[#F9F9F9]'} rounded-xl p-8 flex flex-col items-center justify-center transition-all`}>
-                                {formData.documentUploaded ? (
-                                    <>
-                                        <Check size={40} className="text-[#4A7C59] mb-3" />
-                                        <p className="font-semibold text-[#4A7C59]">Documents Uploaded Successfully</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload size={40} className="text-[#CCCCCC] mb-3" />
-                                        <p className="text-[#5C5C5C] mb-4">Drag and drop files here, or click to browse</p>
-                                        <button onClick={() => setFormData({ ...formData, documentUploaded: true })} className="btn-gold px-6 py-2 text-sm font-semibold">
-                                            Simulate Upload
-                                        </button>
-                                    </>
-                                )}
+                            <p className="text-sm text-[#5C5C5C]">Upload identity or certification documents (ID, CV, certificates). Optional — you can skip.</p>
+
+                            {/* Drop zone */}
+                            <div
+                                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                                onDragLeave={() => setDragging(false)}
+                                onDrop={handleDrop}
+                                onClick={() => fileInputRef.current?.click()}
+                                className={`mt-2 border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all ${
+                                    dragging ? 'border-[#C9A84C] bg-[#C9A84C10]' :
+                                    formData.documents.length > 0 ? 'border-[#4A7C59] bg-[#E8F5EE]' :
+                                    'border-[#CCCCCC] bg-[#F9F9F9] hover:border-[#C9A84C] hover:bg-[#F5F0E8]'
+                                }`}
+                            >
+                                <Upload size={36} className={formData.documents.length > 0 ? 'text-[#4A7C59]' : 'text-[#CCCCCC]'} />
+                                <p className="text-[#5C5C5C] mt-3 text-sm font-medium">
+                                    {dragging ? 'Drop files here…' : 'Drag & drop files, or click to browse'}
+                                </p>
+                                <p className="text-xs text-[#9C9C9C] mt-1">PDF, JPG, PNG up to 10MB each</p>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    multiple
+                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                    className="hidden"
+                                    onChange={(e) => addFiles(e.target.files)}
+                                />
                             </div>
+
+                            {/* File list */}
+                            {formData.documents.length > 0 && (
+                                <div className="space-y-2 mt-2">
+                                    {formData.documents.map((f, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-3 bg-[#F5F0E8] rounded-xl">
+                                            <FileText size={18} className="text-[#C9A84C] flex-shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-[#2D2D2D] truncate">{f.name}</p>
+                                                <p className="text-xs text-[#5C5C5C]">{(f.size / 1024).toFixed(1)} KB</p>
+                                            </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                                                className="p-1.5 rounded-lg hover:bg-red-50 flex-shrink-0"
+                                            >
+                                                <Trash2 size={14} className="text-[#D9534F]" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <p className="text-xs text-[#4A7C59] font-semibold flex items-center gap-1 px-1">
+                                        <Check size={12} /> {formData.documents.length} file{formData.documents.length > 1 ? 's' : ''} selected
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -184,7 +236,7 @@ export default function OnboardingWizard({ onClose, onComplete }) {
                     </button>
 
                     {step < 5 ? (
-                        <button onClick={handleNext} disabled={step === 1 && (!formData.name || !formData.email || !formData.password) || (step === 4 && !formData.documentUploaded)} className="btn-gold px-6 h-11 text-sm font-semibold flex items-center gap-2">
+                        <button onClick={handleNext} disabled={step === 1 && (!formData.name || !formData.email || !formData.password)} className="btn-gold px-6 h-11 text-sm font-semibold flex items-center gap-2">
                             Next <ChevronRight size={16} />
                         </button>
                     ) : (

@@ -1,0 +1,54 @@
+{
+  "name": "prani-backend",
+  "version": "1.0.0",
+  "description": "Prani AI-powered event planning platform — Node.js backend",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:migrate": "prisma migrate deploy",
+    "test": "jest --runInBand --forceExit",
+    "test:watch": "jest --watch"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
+    "clearMocks": true,
+    "resetModules": true
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "@prisma/client": "^5.16.0",
+    "@supabase/supabase-js": "^2.44.0",
+    "archiver": "^7.0.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-validator": "^7.1.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "openai": "^4.52.7",
+    "otplib": "^12.0.1",
+    "pdfkit": "^0.15.0",
+    "qrcode": "^1.5.4",
+    "resend": "^3.4.0",
+    "stripe": "^16.2.0",
+    "uuid": "^10.0.0",
+    "winston": "^3.13.1",
+    "ws": "^8.20.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.4",
+    "prisma": "^5.16.0",
+    "supertest": "^7.0.0"
+  }
+}

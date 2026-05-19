@@ -20,7 +20,7 @@ function UserRow({ user, onUpdate, onDelete }) {
     setChanging(true);
     setRoleOpen(false);
     try {
-      const { data } = await adminAPI.updateUser(user.user_id, { role: newRole });
+      const { data } = await adminAPI.updateUser(user.userId, { role: newRole });
       onUpdate({ ...user, role: data.role ?? newRole });
     } catch (e) {
       console.error(e);
@@ -45,13 +45,13 @@ function UserRow({ user, onUpdate, onDelete }) {
           onClick={() => setRoleOpen(!roleOpen)}
           disabled={changing}
           className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold capitalize transition-opacity ${roleColors[user.role] || 'bg-gray-100 text-gray-600'} ${changing ? 'opacity-50' : 'hover:opacity-80'}`}
-          data-testid={`role-btn-${user.user_id}`}
+          data-testid={`role-btn-${user.userId}`}
         >
           {changing ? <Loader size={11} className="animate-spin" /> : user.role}
           <ChevronDown size={11} />
         </button>
         {roleOpen && (
-          <div className="absolute right-0 top-full mt-1 bg-white border border-[#EBE5DB] rounded-xl shadow-lg z-20 overflow-hidden w-28" data-testid={`role-dropdown-${user.user_id}`}>
+          <div className="absolute right-0 top-full mt-1 bg-white border border-[#EBE5DB] rounded-xl shadow-lg z-20 overflow-hidden w-28" data-testid={`role-dropdown-${user.userId}`}>
             {ROLES.map(r => (
               <button
                 key={r}
@@ -67,12 +67,12 @@ function UserRow({ user, onUpdate, onDelete }) {
       </div>
 
       <div className="flex items-center gap-1">
-        {user.is_active ? <CheckCircle size={16} className="text-[#4A7C59]" /> : <XCircle size={16} className="text-[#D9534F]" />}
+        {user.isActive ? <CheckCircle size={16} className="text-[#4A7C59]" /> : <XCircle size={16} className="text-[#D9534F]" />}
       </div>
       <button
-        onClick={() => onDelete(user.user_id)}
+        onClick={() => onDelete(user.userId)}
         className="p-1.5 rounded-lg hover:bg-[#FBE9E7] text-[#5C5C5C] hover:text-[#D9534F] transition-colors"
-        data-testid={`delete-user-${user.user_id}`}
+        data-testid={`delete-user-${user.userId}`}
       >
         <Trash2 size={15} />
       </button>
@@ -86,7 +86,7 @@ function AuditRow({ log }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-[#F5F0E8] last:border-0 text-sm" data-testid="audit-row">
       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${actionColors[actionKey]}`}>{log.action}</span>
-      <span className="text-[#5C5C5C] flex-1 truncate">{log.user_email}</span>
+      <span className="text-[#5C5C5C] flex-1 truncate">{log.userEmail}</span>
       <span className="text-[#5C5C5C] capitalize">{log.resource}</span>
       <span className="text-[#5C5C5C] text-xs">{new Date(log.timestamp).toLocaleString()}</span>
     </div>
@@ -181,12 +181,12 @@ export default function AdminPage() {
     if (!window.confirm(t('common.confirm_delete'))) return;
     try {
       await adminAPI.deleteUser(userId);
-      setUsers(users.filter(u => u.user_id !== userId));
+      setUsers(users.filter(u => u.userId !== userId));
     } catch (e) { console.error(e); }
   };
 
   const handleUpdateUser = (updated) => {
-    setUsers(users.map(u => u.user_id === updated.user_id ? updated : u));
+    setUsers(users.map(u => u.userId === updated.userId ? updated : u));
   };
 
   const filteredUsers = users.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase()));
@@ -240,7 +240,7 @@ export default function AdminPage() {
           {loading ? (
             <div className="p-4 space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-12 rounded-lg" />)}</div>
           ) : (
-            filteredUsers.map(u => <UserRow key={u.user_id} user={u} onUpdate={handleUpdateUser} onDelete={handleDeleteUser} />)
+            filteredUsers.map(u => <UserRow key={u.userId} user={u} onUpdate={handleUpdateUser} onDelete={handleDeleteUser} />)
           )}
         </div>
       ) : (
@@ -256,7 +256,7 @@ export default function AdminPage() {
           ) : filteredLogs.length === 0 ? (
             <div className="text-center py-10 text-[#5C5C5C]"><FileText size={40} className="mx-auto mb-2 opacity-30" /><p className="text-sm">No audit logs found</p></div>
           ) : (
-            filteredLogs.map(l => <AuditRow key={l.log_id} log={l} />)
+            filteredLogs.map(l => <AuditRow key={l.logId} log={l} />)
           )}
         </div>
       )}

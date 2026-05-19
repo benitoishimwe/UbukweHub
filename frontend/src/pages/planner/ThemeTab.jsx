@@ -1,24 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { plannerAPI } from '../../services/api';
-import { Loader2, Upload, Trash2, Pencil, CheckCircle, Palette } from 'lucide-react';
+import { Loader2, Upload, Trash2, Pencil, CheckCircle, Palette, Sparkles } from 'lucide-react';
 
 const BASE_URL = process.env.REACT_APP_BACKEND_URL;
 const THEMES = ['Modern','Rustic','Beach','Garden','Traditional','Elegant','Bohemian','Minimalist','Glamorous','Vintage'];
 
 export default function ThemeTab({ plan, onPlanUpdate }) {
+  const navigate = useNavigate();
   const [assets, setAssets]     = useState([]);
   const [loading, setLoading]   = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [themeForm, setThemeForm] = useState({ theme: plan.theme || 'Modern', primary_color: plan.primaryColor || '#C9A84C', secondary_color: plan.secondaryColor || '#E8A4B8' });
+  const [themeForm, setThemeForm] = useState({ theme: plan.theme || 'Modern', primaryColor: plan.primaryColor || '#C9A84C', secondaryColor: plan.secondaryColor || '#E8A4B8' });
   const [saving, setSaving]     = useState(false);
   const [editCaption, setEditCaption] = useState(null); // assetId | null
   const [caption, setCaption]   = useState('');
   const fileRef = useRef();
 
   const loadAssets = async () => {
-    const res = await plannerAPI.listAssets(plan.planId);
-    setAssets(res.data);
-    setLoading(false);
+    try {
+      const res = await plannerAPI.listAssets(plan.planId);
+      const d = res.data;
+      setAssets(Array.isArray(d) ? d : (d?.assets || d?.data || []));
+    } catch (e) {
+      console.error('Failed to load assets:', e);
+      setAssets([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadAssets(); }, [plan.planId]);
@@ -75,18 +84,18 @@ export default function ThemeTab({ plan, onPlanUpdate }) {
           <div>
             <label className="block text-xs font-semibold text-[#2D2D2D] mb-1">Primary Color</label>
             <div className="flex gap-2 items-center">
-              <input type="color" value={themeForm.primary_color} onChange={e => setThemeForm(f => ({...f, primary_color: e.target.value}))}
+              <input type="color" value={themeForm.primaryColor} onChange={e => setThemeForm(f => ({...f, primaryColor: e.target.value}))}
                 className="w-10 h-10 rounded-lg border border-[#EBE5DB] cursor-pointer p-0.5" />
-              <input type="text" value={themeForm.primary_color} onChange={e => setThemeForm(f => ({...f, primary_color: e.target.value}))}
+              <input type="text" value={themeForm.primaryColor} onChange={e => setThemeForm(f => ({...f, primaryColor: e.target.value}))}
                 className="input-field flex-1 font-mono text-sm" />
             </div>
           </div>
           <div>
             <label className="block text-xs font-semibold text-[#2D2D2D] mb-1">Secondary Color</label>
             <div className="flex gap-2 items-center">
-              <input type="color" value={themeForm.secondary_color} onChange={e => setThemeForm(f => ({...f, secondary_color: e.target.value}))}
+              <input type="color" value={themeForm.secondaryColor} onChange={e => setThemeForm(f => ({...f, secondaryColor: e.target.value}))}
                 className="w-10 h-10 rounded-lg border border-[#EBE5DB] cursor-pointer p-0.5" />
-              <input type="text" value={themeForm.secondary_color} onChange={e => setThemeForm(f => ({...f, secondary_color: e.target.value}))}
+              <input type="text" value={themeForm.secondaryColor} onChange={e => setThemeForm(f => ({...f, secondaryColor: e.target.value}))}
                 className="input-field flex-1 font-mono text-sm" />
             </div>
           </div>
@@ -96,18 +105,24 @@ export default function ThemeTab({ plan, onPlanUpdate }) {
         <div className="mt-4 p-4 rounded-xl border border-[#EBE5DB] flex items-center gap-4">
           <div className="flex-1">
             <p className="text-xs text-[#5C5C5C] mb-2 font-semibold">Preview</p>
-            <div className="flex gap-2">
-              <button className="px-4 py-2 rounded-xl text-white text-sm font-semibold" style={{backgroundColor: themeForm.primary_color}}>
-                Save the Date
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => navigate('/save-the-date')}
+                className="px-4 py-2 rounded-xl text-white text-sm font-semibold flex items-center gap-1.5 hover:opacity-90 transition-opacity"
+                style={{backgroundColor: themeForm.primaryColor}}
+                title="Open Save-the-Date Studio"
+              >
+                <Sparkles size={13} /> Save the Date
               </button>
-              <div className="px-4 py-2 rounded-xl text-sm font-semibold" style={{backgroundColor: themeForm.secondary_color + '30', color: themeForm.secondary_color}}>
+              <div className="px-4 py-2 rounded-xl text-sm font-semibold" style={{backgroundColor: themeForm.secondaryColor + '30', color: themeForm.secondaryColor}}>
                 {themeForm.theme}
               </div>
             </div>
+            <p className="text-[10px] text-[#5C5C5C] mt-1.5">Click "Save the Date" to open the AI design studio</p>
           </div>
           <div className="flex gap-2">
-            <div className="w-8 h-8 rounded-full shadow-md" style={{backgroundColor: themeForm.primary_color}} />
-            <div className="w-8 h-8 rounded-full shadow-md" style={{backgroundColor: themeForm.secondary_color}} />
+            <div className="w-8 h-8 rounded-full shadow-md" style={{backgroundColor: themeForm.primaryColor}} />
+            <div className="w-8 h-8 rounded-full shadow-md" style={{backgroundColor: themeForm.secondaryColor}} />
           </div>
         </div>
 

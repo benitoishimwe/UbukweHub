@@ -6,7 +6,7 @@ const translations = { en, rw };
 const LangContext = createContext(null);
 
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem('ubukwe_lang') || 'en');
+  const [lang, setLang] = useState(() => localStorage.getItem('prani_lang') || 'en');
 
   const t = (key) => {
     const keys = key.split('.');
@@ -25,7 +25,7 @@ export function LanguageProvider({ children }) {
 
   const switchLang = (newLang) => {
     setLang(newLang);
-    localStorage.setItem('ubukwe_lang', newLang);
+    localStorage.setItem('prani_lang', newLang);
   };
 
   return (

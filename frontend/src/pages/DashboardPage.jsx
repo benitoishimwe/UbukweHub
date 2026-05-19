@@ -39,23 +39,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     (async () => {
-      try {
-        const [evRes, invRes, txRes, stRes] = await Promise.allSettled([
-          eventsAPI.stats(), inventoryAPI.stats(), transactionAPI.stats(), staffAPI.stats()
-        ]);
-        setStats({
-          events: evRes.status === 'fulfilled' ? evRes.value.data : {},
-          inventory: invRes.status === 'fulfilled' ? invRes.value.data : {},
-          transactions: txRes.status === 'fulfilled' ? txRes.value.data : {},
-          staff: stRes.status === 'fulfilled' ? stRes.value.data : {},
-        });
-        const txData = txRes.status === 'fulfilled' ? txRes.value.data : {};
-        setRecentTxs(txData.recent || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+      const [evRes, invRes, txRes, stRes, recentRes] = await Promise.allSettled([
+        eventsAPI.stats(), inventoryAPI.stats(), transactionAPI.stats(), staffAPI.stats(),
+        transactionAPI.list({ size: 5 }),
+      ]);
+      setStats({
+        events: evRes.status === 'fulfilled' ? evRes.value.data : {},
+        inventory: invRes.status === 'fulfilled' ? invRes.value.data : {},
+        transactions: txRes.status === 'fulfilled' ? txRes.value.data : {},
+        staff: stRes.status === 'fulfilled' ? stRes.value.data : {},
+      });
+      if (recentRes.status === 'fulfilled') {
+        setRecentTxs(recentRes.value.data.transactions || []);
       }
+      setLoading(false);
     })();
   }, []);
 
@@ -82,7 +79,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard icon={Calendar} label={t('dashboard.total_events')} value={loading ? '…' : (stats.events.total || 0)} sub={`${stats.events.active || 0} active`} color="bg-[#C9A84C]" testId="stat-events" />
         <StatCard icon={Package} label={t('dashboard.inventory_items')} value={loading ? '…' : (stats.inventory.total || 0)} sub={`${stats.inventory.available || 0} available`} color="bg-[#E8A4B8]" testId="stat-inventory" />
-        <StatCard icon={ArrowLeftRight} label="Transactions" value={loading ? '…' : (stats.transactions.total || 0)} sub={`${stats.transactions.by_type?.rent || 0} rented`} color="bg-[#6B8E9B]" testId="stat-transactions" />
+        <StatCard icon={ArrowLeftRight} label="Transactions" value={loading ? '…' : (stats.transactions.total || 0)} sub={`${stats.transactions.rent || stats.transactions.rental || 0} rented`} color="bg-[#6B8E9B]" testId="stat-transactions" />
         <StatCard icon={Users} label={t('dashboard.staff_on_duty')} value={loading ? '…' : (stats.staff.total || 0)} sub={`${stats.staff.utilization || 0}% utilization`} color="bg-[#4A7C59]" testId="stat-staff" />
       </div>
 
@@ -126,17 +123,17 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {recentTxs.map((tx) => (
-                <div key={tx.transaction_id} className="flex items-center justify-between py-2 border-b border-[#F5F0E8] last:border-0" data-testid="tx-row">
+                <div key={tx.transactionId} className="flex items-center justify-between py-2 border-b border-[#F5F0E8] last:border-0" data-testid="tx-row">
                   <div className="flex items-center gap-3">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${txTypeColors[tx.type] || 'bg-gray-100 text-gray-600'}`}>
                       {tx.type}
                     </span>
                     <div>
-                      <p className="text-sm font-medium text-[#2D2D2D]">{tx.item_name}</p>
-                      <p className="text-xs text-[#5C5C5C]">{tx.staff_name}</p>
+                      <p className="text-sm font-medium text-[#2D2D2D]">{tx.itemName}</p>
+                      <p className="text-xs text-[#5C5C5C]">{tx.staffName}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-[#5C5C5C]">{new Date(tx.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-[#5C5C5C]">{new Date(tx.createdAt).toLocaleDateString()}</p>
                 </div>
               ))}
             </div>

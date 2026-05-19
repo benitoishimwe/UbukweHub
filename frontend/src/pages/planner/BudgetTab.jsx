@@ -6,7 +6,7 @@ import { Plus, Pencil, Trash2, Loader2, CheckCircle, DollarSign } from 'lucide-r
 const CATEGORIES = ['Venue','Catering','Photography','Videography','Flowers','Music','Attire','Transport','Invitations','Decor','Honeymoon','Other'];
 const STATUSES   = ['planned','booked','paid'];
 
-const empty = { category: 'Venue', description: '', estimated_cost: '', actual_cost: '', status: 'planned', due_date: '', vendor_id: '' };
+const empty = { category: 'Venue', description: '', estimatedCost: '', actualCost: '', status: 'planned', dueDate: '', vendorId: '' };
 
 export default function BudgetTab({ plan }) {
   const [items, setItems]     = useState([]);
@@ -18,24 +18,44 @@ export default function BudgetTab({ plan }) {
   const [filter, setFilter]   = useState('all');
 
   const load = async () => {
-    const [a, b] = await Promise.all([plannerAPI.listBudget(plan.planId), plannerAPI.budgetSummary(plan.planId)]);
-    setItems(a.data);
-    setSummary(b.data);
-    setLoading(false);
+    try {
+      const res = await plannerAPI.listBudget(plan.planId);
+      const payload = res.data;
+      const budgetItems = payload.items || (Array.isArray(payload) ? payload : []);
+      setItems(budgetItems);
+
+      const totalEstimated = payload.totals?.estimatedCost ?? budgetItems.reduce((s, i) => s + (Number(i.estimatedCost) || 0), 0);
+      const totalActual    = payload.totals?.actualCost    ?? budgetItems.reduce((s, i) => s + (Number(i.actualCost)    || 0), 0);
+      const totalBudget    = Number(plan.totalBudget || 0);
+      const byCategory     = Object.values(
+        budgetItems.reduce((acc, i) => {
+          if (!acc[i.category]) acc[i.category] = { category: i.category, estimated: 0, actual: 0 };
+          acc[i.category].estimated += Number(i.estimatedCost) || 0;
+          acc[i.category].actual    += Number(i.actualCost)    || 0;
+          return acc;
+        }, {})
+      );
+      setSummary({ total_budget: totalBudget, total_estimated: totalEstimated, total_actual: totalActual, remaining: totalBudget - totalEstimated, by_category: byCategory });
+    } catch (e) {
+      console.error('Budget load error:', e);
+      setSummary({ total_budget: Number(plan.totalBudget || 0), total_estimated: 0, total_actual: 0, remaining: Number(plan.totalBudget || 0), by_category: [] });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [plan.planId]);
 
   const openAdd  = () => { setForm(empty); setModal('add'); };
   const openEdit = (item) => { setForm({
-    category: item.category, description: item.description || '', estimated_cost: item.estimatedCost,
-    actual_cost: item.actualCost || '', status: item.status, due_date: item.dueDate || '', vendor_id: item.vendorId || ''
+    category: item.category, description: item.description || '', estimatedCost: item.estimatedCost,
+    actualCost: item.actualCost || '', status: item.status, dueDate: item.dueDate || '', vendorId: item.vendorId || ''
   }); setModal(item); };
 
   const save = async () => {
     setSaving(true);
     try {
-      const payload = { ...form, estimated_cost: parseFloat(form.estimated_cost) || 0, actual_cost: form.actual_cost ? parseFloat(form.actual_cost) : null };
+      const payload = { ...form, estimatedCost: parseFloat(form.estimatedCost) || 0, actualCost: form.actualCost ? parseFloat(form.actualCost) : null };
       if (modal === 'add') await plannerAPI.addBudget(plan.planId, payload);
       else await plannerAPI.updateBudget(plan.planId, modal.itemId, payload);
       await load();
@@ -161,10 +181,10 @@ export default function BudgetTab({ plan }) {
               </FormRow>
               <div className="grid grid-cols-2 gap-3">
                 <FormRow label="Estimated (RWF)">
-                  <input type="number" value={form.estimated_cost} onChange={e => setForm(f=>({...f, estimated_cost: e.target.value}))} className="input-field" />
+                  <input type="number" value={form.estimatedCost} onChange={e => setForm(f=>({...f, estimatedCost: e.target.value}))} className="input-field" />
                 </FormRow>
                 <FormRow label="Actual (RWF)">
-                  <input type="number" value={form.actual_cost} onChange={e => setForm(f=>({...f, actual_cost: e.target.value}))} className="input-field" placeholder="Leave blank" />
+                  <input type="number" value={form.actualCost} onChange={e => setForm(f=>({...f, actualCost: e.target.value}))} className="input-field" placeholder="Leave blank" />
                 </FormRow>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -174,7 +194,7 @@ export default function BudgetTab({ plan }) {
                   </select>
                 </FormRow>
                 <FormRow label="Due Date">
-                  <input type="date" value={form.due_date} onChange={e => setForm(f=>({...f, due_date: e.target.value}))} className="input-field" />
+                  <input type="date" value={form.dueDate} onChange={e => setForm(f=>({...f, dueDate: e.target.value}))} className="input-field" />
                 </FormRow>
               </div>
             </div>

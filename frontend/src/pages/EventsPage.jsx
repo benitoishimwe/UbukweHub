@@ -12,7 +12,7 @@ const STATUS_COLORS = {
 };
 
 function EventCard({ event, onClick }) {
-  const score = event.greatness_score;
+  const score = event.greatnessScore;
   return (
     <div
       className="card-wedding p-5 cursor-pointer"
@@ -31,8 +31,11 @@ function EventCard({ event, onClick }) {
         </span>
       </div>
       <div className="flex items-center gap-4 text-sm text-[#5C5C5C]">
-        <span className="flex items-center gap-1"><Calendar size={14} />{event.event_date}</span>
-        <span className="flex items-center gap-1"><Users size={14} />{event.guest_count} guests</span>
+        <span className="flex items-center gap-1">
+          <Calendar size={14} />
+          {event.eventDate ? new Date(event.eventDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+        </span>
+        <span className="flex items-center gap-1"><Users size={14} />{event.guestCount ?? 0} guests</span>
       </div>
       {score !== null && score !== undefined && (
         <div className="mt-3 flex items-center gap-2">
@@ -51,8 +54,10 @@ function EventCard({ event, onClick }) {
         </div>
       )}
       <div className="flex items-center justify-between mt-3">
-        <span className="text-xs font-medium text-[#5C5C5C]">Budget: {event.budget?.toLocaleString()} RWF</span>
-        <span className="text-xs text-[#5C5C5C]">{event.staff_ids?.length || 0} staff</span>
+        <span className="text-xs font-medium text-[#5C5C5C]">
+          Budget: {event.budget ? Number(event.budget).toLocaleString() + ' RWF' : '—'}
+        </span>
+        <span className="text-xs text-[#5C5C5C]">{event.staffIds?.length || 0} staff</span>
       </div>
     </div>
   );
@@ -60,18 +65,26 @@ function EventCard({ event, onClick }) {
 
 function EventFormModal({ onClose, onSave }) {
   const { t } = useLang();
-  const [form, setForm] = useState({ name: '', event_date: '', venue: '', client_name: '', budget: '', guest_count: '' });
+  const [form, setForm] = useState({ name: '', eventDate: '', venue: '', clientName: '', budget: '', guestCount: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
-      const { data } = await eventsAPI.create({ ...form, budget: Number(form.budget), guest_count: Number(form.guest_count) });
+      const { data } = await eventsAPI.create({
+        name: form.name,
+        eventDate: form.eventDate || undefined,
+        venue: form.venue || undefined,
+        clientName: form.clientName || undefined,
+        budget: form.budget ? Number(form.budget) : undefined,
+        guestCount: form.guestCount ? Number(form.guestCount) : undefined,
+      });
       onSave(data);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create event');
+      setError(err.response?.data?.message || 'Failed to create event');
     } finally {
       setLoading(false);
     }
@@ -91,7 +104,7 @@ function EventFormModal({ onClose, onSave }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.event_date')}</label>
-              <input className="input-wedding" placeholder="dd/mm/yyyy" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} required data-testid="event-date-input" />
+              <input className="input-wedding" type="date" value={form.eventDate} onChange={(e) => setForm({ ...form, eventDate: e.target.value })} required data-testid="event-date-input" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.venue')}</label>
@@ -99,14 +112,14 @@ function EventFormModal({ onClose, onSave }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.client')}</label>
-              <input className="input-wedding" placeholder="Client name" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} data-testid="event-client-input" />
+              <input className="input-wedding" placeholder="Client name" value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} data-testid="event-client-input" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.guests')}</label>
-              <input className="input-wedding" type="number" placeholder="200" value={form.guest_count} onChange={(e) => setForm({ ...form, guest_count: e.target.value })} data-testid="event-guests-input" />
+              <input className="input-wedding" type="number" placeholder="200" value={form.guestCount} onChange={(e) => setForm({ ...form, guestCount: e.target.value })} data-testid="event-guests-input" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.budget')}</label>
+              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.budget')} (RWF)</label>
               <input className="input-wedding" type="number" placeholder="10000000" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} data-testid="event-budget-input" />
             </div>
           </div>
@@ -197,7 +210,7 @@ export default function EventsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {events.map((ev) => (
-            <EventCard key={ev.event_id} event={ev} onClick={() => setSelectedEvent(ev)} />
+            <EventCard key={ev.eventId} event={ev} onClick={() => setSelectedEvent(ev)} />
           ))}
         </div>
       )}

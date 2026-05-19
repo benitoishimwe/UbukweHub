@@ -16,8 +16,8 @@ export function SubscriptionProvider({ children }) {
       const res = await api.get('/subscriptions/current');
       setSubscription(res.data);
     } catch {
-      // Default to free if fetch fails
-      setSubscription({ plan: 'free', status: 'active', features: {} });
+      // Default to max so all features are accessible
+      setSubscription({ plan: 'max', status: 'active', features: {} });
     } finally {
       setLoading(false);
     }
@@ -25,14 +25,27 @@ export function SubscriptionProvider({ children }) {
 
   useEffect(() => { fetchSubscription(); }, [fetchSubscription]);
 
-  const isFeatureEnabled = (featureKey) => {
-    if (!subscription) return false;
-    const f = subscription.features?.[featureKey];
-    return f?.enabled === true;
+  // Plans and the features they unlock
+  const PLAN_FEATURES = {
+    max:        ['ai_assistant', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports', 'white_label', 'api_access'],
+    enterprise: ['ai_assistant', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports', 'white_label', 'api_access'],
+    pro:        ['ai_assistant', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports'],
+    wedding:    ['ai_assistant', 'save_the_date', 'vendor_marketplace', 'advanced_reports'],
+    trial:      ['ai_assistant', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports'],
+    free:       [],
   };
 
-  const currentPlan = subscription?.plan || 'free';
-  const isPro = ['pro', 'enterprise', 'trial'].includes(currentPlan);
+  const isFeatureEnabled = (featureKey) => {
+    if (!subscription) return false;
+    const plan = subscription.plan || 'free';
+    // Check plan-level access first
+    if (PLAN_FEATURES[plan]?.includes(featureKey)) return true;
+    // Fall back to explicit feature flag from backend
+    return subscription.features?.[featureKey]?.enabled === true;
+  };
+
+  const currentPlan = subscription?.plan || 'max';
+  const isPro = ['pro', 'max', 'enterprise', 'trial', 'wedding'].includes(currentPlan);
 
   return (
     <SubscriptionContext.Provider value={{

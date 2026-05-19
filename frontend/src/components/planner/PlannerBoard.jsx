@@ -4,7 +4,7 @@ import { Users, Clock } from 'lucide-react';
 
 function DraggableStaff({ staff }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `staff-${staff.user_id}`,
+    id: `staff-${staff.userId}`,
     data: { staff }
   });
 
@@ -28,7 +28,7 @@ function DraggableStaff({ staff }) {
 
 function DroppableShift({ shift }) {
   const { isOver, setNodeRef } = useDroppable({
-    id: `shift-${shift.shift_id}`,
+    id: `shift-${shift.shiftId}`,
     data: { shift }
   });
 
@@ -43,7 +43,7 @@ function DroppableShift({ shift }) {
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm text-[#2D2D2D] truncate">{shift.role}</p>
           <p className="text-xs text-[#5C5C5C] flex items-center gap-1 mt-1">
-            <Clock size={12} className="shrink-0" /> <span className="truncate">{shift.date} · {shift.start_time} - {shift.end_time}</span>
+            <Clock size={12} className="shrink-0" /> <span className="truncate">{shift.date ? new Date(shift.date).toLocaleDateString() : ''} · {shift.startTime} - {shift.endTime}</span>
           </p>
         </div>
         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-700 capitalize shrink-0 ml-2">
@@ -52,12 +52,12 @@ function DroppableShift({ shift }) {
       </div>
       
       <div className="mt-3 p-2 bg-[#F9F9F9] rounded border border-dashed border-[#CCCCCC] flex flex-wrap items-center gap-2">
-        {shift.staff_name ? (
+        {shift.staffName ? (
           <>
             <div className="w-6 h-6 rounded-full bg-[#4A7C59] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-              {shift.staff_name.slice(0, 2).toUpperCase()}
+              {shift.staffName.slice(0, 2).toUpperCase()}
             </div>
-            <span className="text-xs font-medium text-[#2D2D2D] truncate">{shift.staff_name}</span>
+            <span className="text-xs font-medium text-[#2D2D2D] truncate">{shift.staffName}</span>
           </>
         ) : (
           <span className="text-xs text-[#5C5C5C] italic">Drop staff here to assign</span>
@@ -82,7 +82,7 @@ export default function PlannerBoard({ staffList, shiftsList, onAssignmentChange
       const staffId = active.id.replace('staff-', '');
       const shiftId = over.id.replace('shift-', '');
 
-      const assignedStaff = staffList.find(s => s.user_id === staffId);
+      const assignedStaff = staffList.find(s => s.userId === staffId);
       if (assignedStaff) {
         onAssignmentChange(shiftId, staffId, assignedStaff.name);
       }
@@ -90,7 +90,7 @@ export default function PlannerBoard({ staffList, shiftsList, onAssignmentChange
   };
 
   const activeStaffNode = activeId && activeId.toString().startsWith('staff-')
-    ? staffList.find(s => `staff-${s.user_id}` === activeId)
+    ? staffList.find(s => `staff-${s.userId}` === activeId)
     : null;
 
   return (
@@ -103,7 +103,7 @@ export default function PlannerBoard({ staffList, shiftsList, onAssignmentChange
           </h3>
           <div className="max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {staffList.map(staff => (
-              <DraggableStaff key={staff.user_id} staff={staff} />
+              <DraggableStaff key={staff.userId} staff={staff} />
             ))}
             {staffList.length === 0 && (
               <p className="text-sm text-[#5C5C5C] italic">No staff found.</p>
@@ -118,7 +118,7 @@ export default function PlannerBoard({ staffList, shiftsList, onAssignmentChange
           </h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {shiftsList.map(shift => (
-              <DroppableShift key={shift.shift_id} shift={shift} />
+              <DroppableShift key={shift.shiftId} shift={shift} />
             ))}
             {shiftsList.length === 0 && (
               <div className="col-span-full text-center py-12 text-[#5C5C5C]">

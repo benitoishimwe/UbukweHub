@@ -6,7 +6,7 @@ import { Plus, Pencil, Trash2, Loader2, Upload, Users, CheckCircle } from 'lucid
 
 const RSVP_COLORS = { attending: '#4CAF92', pending: '#C9A84C', declined: '#D9534F' };
 const MEALS = ['Chicken','Fish','Beef','Vegetarian','Vegan','Kids Meal'];
-const emptyGuest = { full_name:'', email:'', phone:'', rsvp_status:'pending', meal_choice:'', dietary_restrictions:'', table_number:'' };
+const emptyGuest = { fullName:'', email:'', phone:'', rsvpStatus:'pending', mealChoice:'', dietaryRestrictions:'', tableNumber:'' };
 
 export default function GuestsTab({ plan }) {
   const [guests, setGuests]   = useState([]);
@@ -30,14 +30,14 @@ export default function GuestsTab({ plan }) {
 
   const openAdd  = () => { setForm(emptyGuest); setModal('add'); };
   const openEdit = (g) => { setForm({
-    full_name: g.fullName, email: g.email||'', phone: g.phone||'', rsvp_status: g.rsvpStatus,
-    meal_choice: g.mealChoice||'', dietary_restrictions: g.dietaryRestrictions||'', table_number: g.tableNumber||''
+    fullName: g.fullName, email: g.email||'', phone: g.phone||'', rsvpStatus: g.rsvpStatus,
+    mealChoice: g.mealChoice||'', dietaryRestrictions: g.dietaryRestrictions||'', tableNumber: g.tableNumber||''
   }); setModal(g); };
 
   const save = async () => {
     setSaving(true);
     try {
-      const payload = { ...form, table_number: form.table_number ? parseInt(form.table_number) : null };
+      const payload = { ...form, tableNumber: form.tableNumber ? parseInt(form.tableNumber) : null };
       if (modal === 'add') await plannerAPI.addGuest(plan.planId, payload);
       else await plannerAPI.updateGuest(plan.planId, modal.guestId, payload);
       await load(); setModal(null);
@@ -185,32 +185,32 @@ export default function GuestsTab({ plan }) {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-[#2D2D2D] text-lg mb-4">{modal === 'add' ? 'Add Guest' : 'Edit Guest'}</h3>
             <div className="space-y-3">
-              <Field label="Full Name *"><input value={form.full_name} onChange={e=>setForm(f=>({...f,full_name:e.target.value}))} className="input-field" placeholder="Guest name" /></Field>
+              <Field label="Full Name *"><input value={form.fullName} onChange={e=>setForm(f=>({...f,fullName:e.target.value}))} className="input-field" placeholder="Guest name" /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Email"><input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} className="input-field" /></Field>
                 <Field label="Phone"><input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} className="input-field" /></Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="RSVP Status">
-                  <select value={form.rsvp_status} onChange={e=>setForm(f=>({...f,rsvp_status:e.target.value}))} className="input-field">
+                  <select value={form.rsvpStatus} onChange={e=>setForm(f=>({...f,rsvpStatus:e.target.value}))} className="input-field">
                     {['pending','attending','declined'].map(s=><option key={s}>{s}</option>)}
                   </select>
                 </Field>
                 <Field label="Meal Choice">
-                  <select value={form.meal_choice} onChange={e=>setForm(f=>({...f,meal_choice:e.target.value}))} className="input-field">
+                  <select value={form.mealChoice} onChange={e=>setForm(f=>({...f,mealChoice:e.target.value}))} className="input-field">
                     <option value="">— none —</option>
                     {MEALS.map(m=><option key={m}>{m}</option>)}
                   </select>
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Table #"><input type="number" value={form.table_number} onChange={e=>setForm(f=>({...f,table_number:e.target.value}))} className="input-field" /></Field>
-                <Field label="Dietary Notes"><input value={form.dietary_restrictions} onChange={e=>setForm(f=>({...f,dietary_restrictions:e.target.value}))} className="input-field" /></Field>
+                <Field label="Table #"><input type="number" value={form.tableNumber} onChange={e=>setForm(f=>({...f,tableNumber:e.target.value}))} className="input-field" /></Field>
+                <Field label="Dietary Notes"><input value={form.dietaryRestrictions} onChange={e=>setForm(f=>({...f,dietaryRestrictions:e.target.value}))} className="input-field" /></Field>
               </div>
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={() => setModal(null)} className="flex-1 py-2.5 border border-[#EBE5DB] rounded-xl text-sm font-semibold text-[#5C5C5C] hover:bg-[#F5F0E8]">Cancel</button>
-              <button onClick={save} disabled={saving || !form.full_name.trim()} className="flex-1 py-2.5 bg-[#C9A84C] text-white rounded-xl text-sm font-semibold hover:bg-[#b8933d] disabled:opacity-50 flex items-center justify-center gap-2">
+              <button onClick={save} disabled={saving || !form.fullName.trim()} className="flex-1 py-2.5 bg-[#C9A84C] text-white rounded-xl text-sm font-semibold hover:bg-[#b8933d] disabled:opacity-50 flex items-center justify-center gap-2">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Save
               </button>
             </div>

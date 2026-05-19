@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLang } from '../contexts/LanguageContext';
 import { aiAPI, eventsAPI } from '../services/api';
-import { Sparkles, TrendingUp, ClipboardList, DollarSign, Store, MessageCircle, Loader, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, TrendingUp, ClipboardList, DollarSign, Store, MessageCircle, Loader, Send, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 function ScoreGauge({ score }) {
   const color = score >= 80 ? '#4A7C59' : score >= 60 ? '#C9A84C' : '#D9534F';
@@ -55,7 +56,7 @@ function MetricRow({ name, data, expanded, onToggle }) {
 function ChatInterface() {
   const { t } = useLang();
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Hello! I\'m your UbukweHub AI assistant. I can help you with wedding planning, inventory, staff coordination, and more. What would you like to know?' }
+    { role: 'assistant', text: 'Hello! I\'m your Prani AI assistant. I can help you with wedding planning, inventory, staff coordination, and more. What would you like to know?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,9 +69,10 @@ function ChatInterface() {
     setLoading(true);
     try {
       const { data } = await aiAPI.chat({ message: userMsg });
-      setMessages(prev => [...prev, { role: 'assistant', text: data.response }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Sorry, I encountered an error. Please try again.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: data.response || data }]);
+    } catch (e) {
+      const msg = e.response?.data?.message || e.message || 'AI service unavailable';
+      setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${msg}` }]);
     } finally {
       setLoading(false);
     }
@@ -125,9 +127,10 @@ export default function AIAssistantPage() {
   const [greatnessResult, setGreatnesResult] = useState(null);
   const [expandedMetric, setExpandedMetric] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
 
   // Checklist
-  const [checklistForm, setChecklistForm] = useState({ event_name: '', event_date: '', venue: '', guest_count: 200, budget: 10000000, preferences: '' });
+  const [checklistForm, setChecklistForm] = useState({ event_name: 'Uwase Wedding', event_date: '', venue: 'Kigali Serena Hotel', guest_count: 200, budget: 10000000, preferences: '' });
   const [checklistResult, setChecklistResult] = useState(null);
 
   // Budget
@@ -135,37 +138,51 @@ export default function AIAssistantPage() {
   const [budgetResult, setBudgetResult] = useState(null);
 
   useEffect(() => {
-    eventsAPI.list({ limit: 50 }).then(({ data }) => {
-      setEvents(data.events || []);
-      if (data.events?.length > 0) setSelectedEvent(data.events[0].event_id);
-    });
+    eventsAPI.list({ size: 50 }).then(({ data }) => {
+      const evts = data.events || data.data || (Array.isArray(data) ? data : []);
+      setEvents(evts);
+      if (evts.length > 0) setSelectedEvent(evts[0].eventId || evts[0].event_id);
+    }).catch(e => console.error('Events load failed:', e));
   }, []);
 
+  const handleAiError = (e, label) => {
+    console.error(label, e);
+    const msg = e.response?.data?.message || e.response?.data?.error || e.message || 'AI service unavailable. Check that the backend is running with a valid GITHUB_TOKEN.';
+    setAiError(msg);
+    toast.error(`${label}: ${msg}`);
+  };
+
   const calcGreatness = async () => {
-    if (!selectedEvent) return;
+    if (!selectedEvent) { toast.error('Please select an event first'); return; }
     setLoading(true);
+    setAiError(null);
     try {
       const { data } = await aiAPI.greatness({ event_id: selectedEvent });
       setGreatnesResult(data);
-    } catch (e) { console.error(e); }
+      toast.success('Greatness score calculated!');
+    } catch (e) { handleAiError(e, 'Calculate score failed'); }
     finally { setLoading(false); }
   };
 
   const genChecklist = async () => {
     setLoading(true);
+    setAiError(null);
     try {
       const { data } = await aiAPI.checklist(checklistForm);
       setChecklistResult(data);
-    } catch (e) { console.error(e); }
+      toast.success('Checklist generated!');
+    } catch (e) { handleAiError(e, 'Checklist generation failed'); }
     finally { setLoading(false); }
   };
 
   const forecastBudget = async () => {
     setLoading(true);
+    setAiError(null);
     try {
       const { data } = await aiAPI.budget(budgetForm);
       setBudgetResult(data);
-    } catch (e) { console.error(e); }
+      toast.success('Budget forecast ready!');
+    } catch (e) { handleAiError(e, 'Budget forecast failed'); }
     finally { setLoading(false); }
   };
 
@@ -185,7 +202,7 @@ export default function AIAssistantPage() {
           </div>
           <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{fontFamily:'Playfair Display,serif'}}>{t('ai.title')}</h1>
         </div>
-        <p className="text-[#5C5C5C] text-sm">Powered by GPT-4o · Tailored for Rwanda wedding operations</p>
+        <p className="text-[#5C5C5C] text-sm">Powered by GPT-4o · DeepSeek-R1 · Llama 4 · Tailored for Rwanda wedding operations</p>
       </div>
 
       {/* Tabs */}
@@ -205,7 +222,7 @@ export default function AIAssistantPage() {
             <div className="mb-4">
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Select Event</label>
               <select className="input-wedding" value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} data-testid="greatness-event-select">
-                {events.map(e => <option key={e.event_id} value={e.event_id}>{e.name}</option>)}
+                {events.map(e => <option key={e.eventId} value={e.eventId}>{e.name}</option>)}
               </select>
             </div>
             <button onClick={calcGreatness} disabled={loading || !selectedEvent} className="btn-gold w-full h-12 flex items-center justify-center gap-2" data-testid="calc-greatness-btn">
@@ -366,7 +383,7 @@ export default function AIAssistantPage() {
               <Sparkles size={16} className="text-white" />
             </div>
             <div>
-              <p className="text-sm font-bold text-[#2D2D2D]">UbukweHub AI</p>
+              <p className="text-sm font-bold text-[#2D2D2D]">Prani AI</p>
               <p className="text-xs text-[#4A7C59]">● Online · GPT-4o</p>
             </div>
           </div>

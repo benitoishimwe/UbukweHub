@@ -3,25 +3,33 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLang } from '../contexts/LanguageContext';
 import { authAPI } from '../services/api';
-import { Eye, EyeOff, Loader, Globe } from 'lucide-react';
+import { Eye, EyeOff, Loader, Globe, Sparkles, Calendar, Users } from 'lucide-react';
+
+const ROLE_PATHS = {
+  super_admin:   '/super-admin',
+  tenant_admin:  '/dashboard',
+  staff:         '/dashboard',
+  vendor:        '/dashboard',
+  client:        '/dashboard',
+  event_manager: '/dashboard',
+};
 
 export default function LoginPage() {
   const { login } = useAuth();
   const { t, lang, switchLang } = useLang();
   const navigate = useNavigate();
 
-  const [tab, setTab] = useState('login'); // login | register
+  const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ email: '', password: '', name: '' });
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [mfaState, setMfaState] = useState(null); // {user_id, methods}
+  const [mfaState, setMfaState] = useState(null);
   const [mfaMethod, setMfaMethod] = useState('totp');
   const [mfaCode, setMfaCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
 
   const handleGoogleLogin = () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     const redirectUrl = window.location.origin + '/auth/callback';
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
@@ -32,21 +40,23 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (tab === 'register') {
-        const { data } = await authAPI.register(form);
-        login(data.user, data.token);
-        navigate('/dashboard');
+        const res = await authAPI.register(form);
+        const payload = res.data;
+        login(payload.user, payload.token);
+        navigate(ROLE_PATHS[payload.user.role] ?? '/dashboard');
       } else {
-        const { data } = await authAPI.login({ email: form.email, password: form.password });
-        if (data.mfa_required) {
-          setMfaState({ user_id: data.user_id, methods: data.mfa_methods });
-          setMfaMethod(data.mfa_methods[0] || 'totp');
+        const res = await authAPI.login({ email: form.email, password: form.password });
+        const payload = res.data;
+        if (payload.mfa_required) {
+          setMfaState({ userId: payload.userId, method: payload.method });
+          setMfaMethod(payload.method || 'totp');
         } else {
-          login(data.user, data.token);
-          navigate('/dashboard');
+          login(payload.user, payload.token);
+          navigate(ROLE_PATHS[payload.user.role] ?? '/dashboard');
         }
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.response?.data?.detail || 'An error occurred');
+      setError(err.response?.data?.message || err.response?.data?.error || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -55,9 +65,9 @@ export default function LoginPage() {
   const handleSendOtp = async () => {
     setLoading(true);
     try {
-      await authAPI.sendEmailOtp(mfaState.user_id);
+      await authAPI.sendEmailOtp(mfaState.userId);
       setOtpSent(true);
-    } catch (err) {
+    } catch {
       setError('Failed to send OTP');
     } finally {
       setLoading(false);
@@ -69,41 +79,59 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const { data } = await authAPI.verifyMfa({ user_id: mfaState.user_id, code: mfaCode, method: mfaMethod });
-      login(data.user, data.token);
-      navigate('/dashboard');
+      const res = await authAPI.verifyMfa({ userId: mfaState.userId, code: mfaCode, method: mfaMethod });
+      const payload = res.data.data;
+      login(payload.user, payload.token);
+      navigate(ROLE_PATHS[payload.user.role] ?? '/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || err.response?.data?.detail || 'Invalid code');
+      setError(err.response?.data?.message || err.response?.data?.error || 'Invalid code');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row" style={{background:'#F5F0E8'}}>
+    <div className="min-h-screen flex flex-col lg:flex-row" style={{background:'#F9F9FB'}}>
       {/* Left Panel - Hero */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <img
           src="https://images.pexels.com/photos/18064219/pexels-photo-18064219.jpeg"
-          alt="Rwandan wedding"
+          alt="African wedding celebration"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#2D2D2D]/60 to-[#C9A84C]/40" />
-        <div className="relative z-10 flex flex-col justify-end p-12 text-white">
-          <div className="mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#C9A84C] flex items-center justify-center shadow-lg mb-4">
-              <span className="text-white font-bold text-xl" style={{fontFamily:'Playfair Display,serif'}}>U</span>
+        <div className="absolute inset-0" style={{background:'linear-gradient(135deg, rgba(15,76,92,0.85) 0%, rgba(15,76,92,0.5) 100%)'}} />
+        <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
+          {/* Top logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <span className="text-white font-bold text-lg" style={{fontFamily:'Poppins,sans-serif'}}>P</span>
             </div>
-            <h1 className="text-5xl font-bold mb-3" style={{fontFamily:'Playfair Display,serif'}}>UbukweHub</h1>
-            <p className="text-xl text-white/80 leading-relaxed">{t('auth.tagline')}</p>
+            <span className="text-xl font-bold" style={{fontFamily:'Poppins,sans-serif'}}>Prani</span>
           </div>
-          <div className="flex gap-6 mt-6">
-            {[['500+', 'Events Managed'], ['1,200+', 'Inventory Items'], ['30+', 'Staff']].map(([n, l]) => (
-              <div key={l} className="text-center">
-                <p className="text-2xl font-bold text-[#E6C975]">{n}</p>
-                <p className="text-sm text-white/70">{l}</p>
-              </div>
-            ))}
+
+          {/* Bottom content */}
+          <div>
+            <h1 className="text-5xl font-bold mb-4 leading-tight" style={{fontFamily:'Poppins,sans-serif'}}>
+              Plan with confidence<br />the African way.
+            </h1>
+            <p className="text-lg text-white/80 mb-8">
+              AI-powered event planning for African businesses. Weddings, corporate events, and more — all in one platform.
+            </p>
+            <div className="flex gap-8">
+              {[
+                { icon: Calendar, n: '500+', l: 'Events Managed' },
+                { icon: Users, n: '1,200+', l: 'Happy Clients' },
+                { icon: Sparkles, n: '98%', l: 'AI Accuracy' },
+              ].map(({ icon: Icon, n, l }) => (
+                <div key={l} className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Icon size={16} className="text-[#E67E22]" />
+                    <p className="text-2xl font-bold text-[#E6C975]">{n}</p>
+                  </div>
+                  <p className="text-sm text-white/60">{l}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -112,18 +140,19 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 lg:px-12">
         {/* Mobile Logo */}
         <div className="lg:hidden flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-[#C9A84C] flex items-center justify-center">
-            <span className="text-white font-bold text-lg" style={{fontFamily:'Playfair Display,serif'}}>U</span>
+          <div className="w-10 h-10 rounded-xl bg-[#0F4C5C] flex items-center justify-center">
+            <span className="text-white font-bold text-lg" style={{fontFamily:'Poppins,sans-serif'}}>P</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#2D2D2D]" style={{fontFamily:'Playfair Display,serif'}}>UbukweHub</h1>
+          <h1 className="text-2xl font-bold text-[#111827]" style={{fontFamily:'Poppins,sans-serif'}}>Prani</h1>
         </div>
 
         <div className="w-full max-w-md animate-scale-in">
           {/* Language Toggle */}
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <Link to="/" className="text-sm text-[#0F4C5C] hover:underline font-medium">← Back to home</Link>
             <button
               onClick={() => switchLang(lang === 'en' ? 'rw' : 'en')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#EBE5DB] text-sm text-[#5C5C5C] hover:border-[#C9A84C] transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E5E7EB] text-sm text-[#6B7280] hover:border-[#0F4C5C] transition-colors"
               data-testid="lang-toggle-login"
             >
               <Globe size={14} />
@@ -134,14 +163,23 @@ export default function LoginPage() {
           <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.08)] p-8">
             {!mfaState ? (
               <>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-[#111827]" style={{fontFamily:'Poppins,sans-serif'}}>
+                    {tab === 'login' ? 'Welcome back' : 'Create account'}
+                  </h2>
+                  <p className="text-[#6B7280] text-sm mt-1">
+                    {tab === 'login' ? 'Sign in to your Prani workspace' : 'Start your 14-day free trial'}
+                  </p>
+                </div>
+
                 {/* Tabs */}
-                <div className="flex gap-1 bg-[#F5F0E8] rounded-xl p-1 mb-6">
+                <div className="flex gap-1 bg-[#F9F9FB] rounded-xl p-1 mb-6">
                   {['login', 'register'].map((t_) => (
                     <button
                       key={t_}
                       onClick={() => { setTab(t_); setError(''); }}
                       className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-                        tab === t_ ? 'bg-white text-[#C9A84C] shadow-sm' : 'text-[#5C5C5C]'
+                        tab === t_ ? 'bg-white text-[#0F4C5C] shadow-sm' : 'text-[#6B7280]'
                       }`}
                       data-testid={`tab-${t_}`}
                     >
@@ -153,7 +191,7 @@ export default function LoginPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {tab === 'register' && (
                     <div>
-                      <label className="block text-sm font-medium text-[#2D2D2D] mb-1.5">{t('auth.name')}</label>
+                      <label className="block text-sm font-medium text-[#111827] mb-1.5">{t('auth.name')}</label>
                       <input
                         className="input-wedding"
                         placeholder="Amina Uwase"
@@ -165,7 +203,7 @@ export default function LoginPage() {
                     </div>
                   )}
                   <div>
-                    <label className="block text-sm font-medium text-[#2D2D2D] mb-1.5">{t('auth.email')}</label>
+                    <label className="block text-sm font-medium text-[#111827] mb-1.5">{t('auth.email')}</label>
                     <input
                       className="input-wedding"
                       type="email"
@@ -177,7 +215,7 @@ export default function LoginPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#2D2D2D] mb-1.5">{t('auth.password')}</label>
+                    <label className="block text-sm font-medium text-[#111827] mb-1.5">{t('auth.password')}</label>
                     <div className="relative">
                       <input
                         className="input-wedding pr-10"
@@ -191,7 +229,7 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={() => setShowPwd(!showPwd)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5C5C5C]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280]"
                       >
                         {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
@@ -199,13 +237,13 @@ export default function LoginPage() {
                   </div>
 
                   {error && (
-                    <p className="text-sm text-[#D9534F] bg-[#FBE9E7] rounded-lg px-3 py-2" data-testid="login-error">{error}</p>
+                    <p className="text-sm text-[#DC2626] bg-[#FEE2E2] rounded-lg px-3 py-2" data-testid="login-error">{error}</p>
                   )}
 
                   <button
                     type="submit"
                     disabled={loading}
-                    className="btn-gold w-full h-12 flex items-center justify-center gap-2 text-base"
+                    className="btn-primary w-full h-12 flex items-center justify-center gap-2 text-base"
                     data-testid="login-submit"
                   >
                     {loading ? <Loader size={18} className="animate-spin" /> : null}
@@ -214,14 +252,14 @@ export default function LoginPage() {
                 </form>
 
                 <div className="flex items-center gap-3 my-5">
-                  <div className="flex-1 h-px bg-[#EBE5DB]" />
-                  <span className="text-xs text-[#5C5C5C]">{t('auth.or')}</span>
-                  <div className="flex-1 h-px bg-[#EBE5DB]" />
+                  <div className="flex-1 h-px bg-[#E5E7EB]" />
+                  <span className="text-xs text-[#6B7280]">{t('auth.or')}</span>
+                  <div className="flex-1 h-px bg-[#E5E7EB]" />
                 </div>
 
                 <button
                   onClick={handleGoogleLogin}
-                  className="w-full h-12 flex items-center justify-center gap-3 rounded-full border-2 border-[#EBE5DB] text-[#2D2D2D] font-medium text-sm hover:border-[#C9A84C] hover:bg-[#C9A84C05] transition-all"
+                  className="w-full h-12 flex items-center justify-center gap-3 rounded-xl border-2 border-[#E5E7EB] text-[#111827] font-medium text-sm hover:border-[#0F4C5C] hover:bg-[#E8F4F8] transition-all"
                   data-testid="google-login-btn"
                 >
                   <svg viewBox="0 0 24 24" className="w-5 h-5">
@@ -232,20 +270,29 @@ export default function LoginPage() {
                   </svg>
                   {t('auth.google_login')}
                 </button>
+
+                {tab === 'register' && (
+                  <p className="text-xs text-[#6B7280] text-center mt-4">
+                    By registering you agree to our{' '}
+                    <a href="#" className="text-[#0F4C5C] hover:underline">Terms of Service</a>
+                    {' '}and{' '}
+                    <a href="#" className="text-[#0F4C5C] hover:underline">Privacy Policy</a>
+                  </p>
+                )}
               </>
             ) : (
               /* MFA Screen */
               <div className="animate-scale-in">
                 <div className="text-center mb-6">
-                  <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-[#C9A84C15] flex items-center justify-center">
-                    <svg className="w-7 h-7 text-[#C9A84C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-[#E8F4F8] flex items-center justify-center">
+                    <svg className="w-7 h-7 text-[#0F4C5C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </div>
-                  <h2 className="text-xl font-bold text-[#2D2D2D]">{t('auth.mfa_required')}</h2>
+                  <h2 className="text-xl font-bold text-[#111827]" style={{fontFamily:'Poppins,sans-serif'}}>{t('auth.mfa_required')}</h2>
+                  <p className="text-sm text-[#6B7280] mt-1">Two-factor authentication required</p>
                 </div>
 
-                {/* Method selector */}
                 {mfaState.methods?.length > 1 && (
                   <div className="flex gap-2 mb-4">
                     {mfaState.methods.map((m) => (
@@ -253,7 +300,7 @@ export default function LoginPage() {
                         key={m}
                         onClick={() => setMfaMethod(m)}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all border ${
-                          mfaMethod === m ? 'border-[#C9A84C] bg-[#C9A84C10] text-[#C9A84C]' : 'border-[#EBE5DB] text-[#5C5C5C]'
+                          mfaMethod === m ? 'border-[#0F4C5C] bg-[#E8F4F8] text-[#0F4C5C]' : 'border-[#E5E7EB] text-[#6B7280]'
                         }`}
                         data-testid={`mfa-method-${m}`}
                       >
@@ -267,7 +314,7 @@ export default function LoginPage() {
                   <button
                     onClick={handleSendOtp}
                     disabled={loading}
-                    className="btn-gold w-full h-11 mb-4 flex items-center justify-center text-sm"
+                    className="btn-primary w-full h-11 mb-4 flex items-center justify-center text-sm"
                     data-testid="send-otp-btn"
                   >
                     {loading ? <Loader size={16} className="animate-spin mr-2" /> : null}
@@ -277,7 +324,7 @@ export default function LoginPage() {
 
                 <form onSubmit={handleMfaVerify} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#2D2D2D] mb-1.5">{t('auth.mfa_code')}</label>
+                    <label className="block text-sm font-medium text-[#111827] mb-1.5">{t('auth.mfa_code')}</label>
                     <input
                       className="input-wedding text-center text-2xl tracking-[0.5em] font-bold"
                       type="text"
@@ -289,21 +336,21 @@ export default function LoginPage() {
                       required
                       data-testid="mfa-code-input"
                     />
-                    <p className="text-xs text-[#5C5C5C] mt-1.5 text-center">
+                    <p className="text-xs text-[#6B7280] mt-1.5 text-center">
                       {mfaMethod === 'totp' ? t('auth.totp_prompt') : t('auth.email_otp_prompt')}
                     </p>
                   </div>
-                  {error && <p className="text-sm text-[#D9534F] bg-[#FBE9E7] rounded-lg px-3 py-2" data-testid="mfa-error">{error}</p>}
+                  {error && <p className="text-sm text-[#DC2626] bg-[#FEE2E2] rounded-lg px-3 py-2" data-testid="mfa-error">{error}</p>}
                   <button
                     type="submit"
                     disabled={loading || mfaCode.length < 6}
-                    className="btn-gold w-full h-12 flex items-center justify-center gap-2"
+                    className="btn-primary w-full h-12 flex items-center justify-center gap-2"
                     data-testid="mfa-verify-btn"
                   >
                     {loading ? <Loader size={18} className="animate-spin" /> : null}
                     {t('auth.verify')}
                   </button>
-                  <button type="button" onClick={() => setMfaState(null)} className="w-full text-sm text-[#5C5C5C] hover:text-[#2D2D2D]">
+                  <button type="button" onClick={() => setMfaState(null)} className="w-full text-sm text-[#6B7280] hover:text-[#111827]">
                     {t('common.back')}
                   </button>
                 </form>

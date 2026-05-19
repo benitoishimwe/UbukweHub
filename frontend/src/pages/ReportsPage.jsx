@@ -31,7 +31,7 @@ export default function ReportsPage() {
         setInvStats(invData);
         setEvStats(evData);
         // Admin-only extended stats
-        if (user?.role === 'admin') {
+        if (user?.role === 'tenant_admin' || user?.role === 'super_admin') {
           const aRes = await adminAPI.stats().catch(() => ({ data: {} }));
           setStats(aRes.data || {});
         } else {
@@ -49,14 +49,14 @@ export default function ReportsPage() {
     })();
   }, [user]);
 
-  const txChartData = txStats.by_type ? Object.entries(txStats.by_type).map(([type, count]) => ({ type, count })) : [];
+  const txChartData = Object.entries(txStats).filter(([k]) => k !== 'total').map(([type, count]) => ({ type, count }));
   const invCatData = invStats.categories || [];
   const userRoleData = stats.users_by_role ? Object.entries(stats.users_by_role).map(([role, count]) => ({ role, count })) : [];
 
   const handleExport = () => {
     const data = {
       generated_at: new Date().toISOString(),
-      platform: 'UbukweHub',
+      platform: 'Prani',
       stats,
       transaction_stats: txStats,
       inventory_stats: invStats,
@@ -65,7 +65,7 @@ export default function ReportsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ubukwehub-report-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `prani-report-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
   };
 
@@ -82,7 +82,7 @@ export default function ReportsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
           { icon: Calendar, label: 'Total Events', value: stats.total_events || 0, color: 'text-[#C9A84C]' },
-          { icon: Package, label: 'Inventory Items', value: stats.total_inventory || 0, color: 'text-[#E8A4B8]' },
+          { icon: Package, label: 'Inventory Items', value: stats.total_inventory ?? invStats.total ?? 0, color: 'text-[#E8A4B8]' },
           { icon: ArrowLeftRight, label: 'Transactions', value: stats.total_transactions || 0, color: 'text-[#4A7C59]' },
           { icon: TrendingUp, label: 'Total Users', value: stats.total_users || 0, color: 'text-[#6B8E9B]' },
         ].map(({ icon: Icon, label, value, color }) => (
@@ -164,9 +164,9 @@ export default function ReportsPage() {
           <h2 className="text-lg font-bold text-[#2D2D2D] mb-4" style={{fontFamily:'Playfair Display,serif'}}>Inventory Availability</h2>
           <div className="space-y-4">
             {[
-              { label: 'Available', value: invStats.available || 0, color: '#4A7C59', total: invStats.total || 1 },
-              { label: 'Rented', value: invStats.rented || 0, color: '#C9A84C', total: invStats.total || 1 },
-              { label: 'Maintenance', value: invStats.maintenance || 0, color: '#D9534F', total: invStats.total || 1 },
+              { label: 'Available', value: invStats.available || 0, color: '#4A7C59', total: invStats.totalItems || 1 },
+              { label: 'Rented', value: invStats.rented || 0, color: '#C9A84C', total: invStats.totalItems || 1 },
+              { label: 'Maintenance', value: invStats.maintenance || 0, color: '#D9534F', total: invStats.totalItems || 1 },
             ].map(({ label, value, color, total }) => (
               <div key={label}>
                 <div className="flex items-center justify-between mb-1.5">
