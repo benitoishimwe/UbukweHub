@@ -809,18 +809,18 @@ router.post('/tenants/:tenantId/grant-trial', async (req, res, next) => {
     const subUserId = tenantAdmin?.userId ?? req.user.userId;
 
     const existing = await prisma.subscription.findFirst({
-      where: { tenantId, status: { in: ['active', 'trialing'] } },
+      where: { tenantId, status: { in: ['active', 'trial'] } },
       orderBy: { createdAt: 'desc' },
     });
     let subscription;
     if (existing) {
       subscription = await prisma.subscription.update({
         where: { subscriptionId: existing.subscriptionId },
-        data: { plan: normalizedPlan, status: 'trialing', trialEndsAt, cancelAtPeriodEnd: false },
+        data: { plan: normalizedPlan, status: 'trial', trialEndsAt, cancelAtPeriodEnd: false },
       });
     } else {
       subscription = await prisma.subscription.create({
-        data: { userId: subUserId, tenantId, plan: normalizedPlan, status: 'trialing', trialEndsAt },
+        data: { userId: subUserId, tenantId, plan: normalizedPlan, status: 'trial', trialEndsAt },
       });
     }
 

@@ -30,7 +30,7 @@ async function resolvePlan(tenantId) {
   const subscription = await prisma.subscription.findFirst({
     where: {
       tenantId,
-      status: { in: ['active', 'trialing'] },
+      status: { in: ['active', 'trial'] },
     },
     orderBy: { createdAt: 'desc' },
     select: { plan: true },
