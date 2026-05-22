@@ -259,7 +259,8 @@ function PlansTab({ tenants, loading, onRefresh }) {
         <span className="text-xs text-[#9C9C9C]">{filtered.length} tenant{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
-      <div className="bg-white rounded-2xl border border-[#EBE5DB] overflow-hidden">
+      <div className="overflow-x-auto rounded-2xl border border-[#EBE5DB]">
+      <div className="bg-white min-w-[480px]">
         {/* Header row */}
         <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 px-4 py-2.5 bg-[#F9F7F2] text-[10px] font-bold text-[#9C9C9C] uppercase tracking-wide border-b border-[#EBE5DB]">
           <span>Tenant</span>
@@ -320,6 +321,7 @@ function PlansTab({ tenants, loading, onRefresh }) {
             </div>
           </div>
         ))}
+      </div>
       </div>
 
       {modal?.type === 'plan' && (
@@ -610,7 +612,7 @@ export default function SubscriptionsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-white rounded-xl border border-[#EBE5DB] p-1 w-fit mb-6">
+      <div className="flex gap-1 bg-white rounded-xl border border-[#EBE5DB] p-1 w-fit max-w-full overflow-x-auto mb-6">
         {TABS.map(({ k, l, icon: Icon }) => (
           <button
             key={k}

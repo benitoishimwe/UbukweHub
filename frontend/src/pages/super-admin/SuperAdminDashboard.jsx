@@ -43,9 +43,41 @@ export default function SuperAdminDashboard({ children }) {
   const isRoot = location.pathname === '/super-admin';
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] flex">
-      {/* Sidebar */}
-      <aside className="w-60 bg-[#1A1A2E] flex flex-col py-6 px-4 flex-shrink-0">
+    <div className="min-h-screen bg-[#F5F0E8] flex flex-col md:flex-row">
+      {/* Mobile top bar */}
+      <div className="md:hidden bg-[#1A1A2E] flex items-center justify-between px-4 py-3 gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <ShieldAlert size={18} className="text-[#C9A84C]" />
+          <span className="text-white font-bold text-sm">Super Admin</span>
+        </div>
+        <nav className="flex items-center gap-1 overflow-x-auto">
+          {NAV.map(({ label, path, icon: Icon }) => {
+            const active = location.pathname === path;
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  active ? 'bg-[#C9A84C] text-white' : 'text-[#A0A0B0] hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Icon size={13} />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+        <button
+          onClick={handleLogout}
+          className="flex-shrink-0 p-1.5 rounded-lg text-[#A0A0B0] hover:text-white hover:bg-white/10 transition-colors"
+          title="Log out"
+        >
+          <LogOut size={16} />
+        </button>
+      </div>
+
+      {/* Sidebar (desktop only) */}
+      <aside className="hidden md:flex w-60 bg-[#1A1A2E] flex-col py-6 px-4 flex-shrink-0">
         <div className="flex items-center gap-2 px-2 mb-8">
           <ShieldAlert size={22} className="text-[#C9A84C]" />
           <span className="text-white font-bold text-sm">Super Admin</span>
@@ -83,7 +115,7 @@ export default function SuperAdminDashboard({ children }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 min-w-0 p-4 md:p-8 overflow-y-auto">
         {children ?? (
           <>
             <h1 className="text-2xl font-bold text-[#2D2D2D] mb-6">Platform Overview</h1>

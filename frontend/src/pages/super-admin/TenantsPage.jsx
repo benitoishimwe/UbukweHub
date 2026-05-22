@@ -100,7 +100,7 @@ export default function TenantsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#2D2D2D]">Tenants</h1>
           <p className="text-sm text-[#5C5C5C]">{total} total organizations</p>

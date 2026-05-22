@@ -39,7 +39,7 @@ export default function OverviewTab({ plan }) {
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
       {/* Countdown hero */}
       <div className="bg-gradient-to-r from-[#C9A84C] to-[#b8933d] rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-white/70 text-sm font-medium">Your wedding in</p>
             <p className="text-5xl font-bold mt-1" style={{fontFamily:'Playfair Display,serif'}}>

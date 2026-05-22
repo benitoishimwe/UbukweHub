@@ -168,7 +168,7 @@ export default function DashboardPage() {
 
       {/* Wedding Greatness Teaser */}
       <div className="mt-6 bg-gradient-to-r from-[#C9A84C] to-[#E6C975] rounded-2xl p-6 text-white animate-slide-up stagger-3" data-testid="greatness-teaser">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-xl font-bold mb-1" style={{fontFamily:'Playfair Display,serif'}}>{t('dashboard.wedding_greatness')}</h3>
             <p className="text-white/80 text-sm">AI-powered score across 6 key metrics</p>

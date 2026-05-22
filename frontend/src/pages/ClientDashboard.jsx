@@ -318,7 +318,7 @@ export default function ClientDashboard() {
 
         {/* Upcoming Events */}
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-semibold text-[#5C5C5C] uppercase tracking-wide">Upcoming Events</h2>
             <button onClick={() => navigate('/events')} className="text-xs text-[#C9A84C] font-semibold flex items-center gap-0.5">
               View all <ChevronRight size={12} />

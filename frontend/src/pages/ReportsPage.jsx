@@ -71,7 +71,7 @@ export default function ReportsPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{fontFamily:'Playfair Display,serif'}}>{t('nav.reports')}</h1>
         <button onClick={handleExport} className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border-2 border-[#C9A84C] text-[#C9A84C] text-sm font-semibold hover:bg-[#C9A84C10]" data-testid="export-report-btn">
           <Download size={16} /> {t('common.export')}

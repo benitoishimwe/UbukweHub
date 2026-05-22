@@ -588,14 +588,14 @@ export default function InventoryPage() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>
             {t('inventory.title')}
           </h1>
           <p className="text-sm text-[#5C5C5C] mt-0.5">Click any item to view details</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={() => setScanning(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-[#C9A84C] text-[#C9A84C] text-sm font-semibold hover:bg-[#FFF8EC] transition-colors" data-testid="scan-qr-btn">
             <QrCode size={16} /> {t('inventory.scan_qr')}
           </button>

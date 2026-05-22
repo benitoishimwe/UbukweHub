@@ -133,7 +133,7 @@ export default function ThemeTab({ plan, onPlanUpdate }) {
 
       {/* Mood board */}
       <div className="bg-white rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <h3 className="font-bold text-[#2D2D2D]">Mood Board</h3>
           <label className="flex items-center gap-1.5 px-4 py-2 bg-[#C9A84C] text-white rounded-xl text-sm font-semibold hover:bg-[#b8933d] cursor-pointer">
             {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}

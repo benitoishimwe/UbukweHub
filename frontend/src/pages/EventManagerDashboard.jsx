@@ -149,7 +149,7 @@ export default function EventManagerDashboard() {
 
         {/* Upcoming Events */}
         <div className="card-wedding p-6 animate-slide-up stagger-2 lg:col-span-2" data-testid="upcoming-events">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <h2 className="text-lg font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>Upcoming Events</h2>
             <button onClick={() => navigate('/events')} className="text-sm text-[#C9A84C] font-medium flex items-center gap-1 hover:gap-2 transition-all">
               View All <ChevronRight size={16} />
@@ -214,7 +214,7 @@ export default function EventManagerDashboard() {
       {/* Staff on Duty Today */}
       {!loading && todayShifts.length > 0 && (
         <div className="mt-6 card-wedding p-6 animate-slide-up stagger-3" data-testid="staff-on-duty">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <h2 className="text-lg font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>
               Staff on Duty Today
             </h2>
@@ -247,7 +247,7 @@ export default function EventManagerDashboard() {
 
       {/* AI Planner CTA */}
       <div className="mt-6 bg-gradient-to-r from-[#0F4C5C] to-[#1A6B82] rounded-2xl p-6 text-white animate-slide-up stagger-4" data-testid="ai-planner-cta">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-xl font-bold mb-1" style={{ fontFamily: 'Playfair Display,serif' }}>AI Event Planner</h3>
             <p className="text-white/80 text-sm">Generate checklists, timelines, and seating plans</p>

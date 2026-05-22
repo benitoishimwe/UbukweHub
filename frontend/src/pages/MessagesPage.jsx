@@ -4,7 +4,7 @@ import { messagesAPI } from '../services/api';
 import { toast } from 'sonner';
 import {
   MessageSquare, Send, Loader2, CheckCheck, Users, Search,
-  ShieldCheck, ChevronRight,
+  ShieldCheck, ChevronRight, ArrowLeft,
 } from 'lucide-react';
 
 function formatTime(dateStr) {
@@ -47,7 +47,7 @@ const STAFF_ROLES  = ['staff', 'event_manager'];
 
 // ─── DM Thread view ───────────────────────────────────────────────────────────
 
-function DMThread({ partner, currentUser, tenantMembers }) {
+function DMThread({ partner, currentUser, tenantMembers, onBack }) {
   const [messages, setMessages]  = useState([]);
   const [input, setInput]        = useState('');
   const [loading, setLoading]    = useState(true);
@@ -135,6 +135,14 @@ function DMThread({ partner, currentUser, tenantMembers }) {
     <div className="flex flex-col flex-1 min-h-0 bg-[#F9F9FB]">
       {/* Thread header */}
       <div className="flex items-center gap-3 px-5 py-3 bg-white border-b border-[#E5E7EB] flex-shrink-0">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="sm:hidden p-1.5 -ml-1.5 rounded-lg hover:bg-[#F3F4F6] transition-colors flex-shrink-0"
+          >
+            <ArrowLeft size={18} className="text-[#374151]" />
+          </button>
+        )}
         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white ${roleColor(partner.role)}`}>
           {initials(partner.name)}
         </div>
@@ -228,7 +236,7 @@ function DMThread({ partner, currentUser, tenantMembers }) {
 
 // ─── Contact list (left panel) ────────────────────────────────────────────────
 
-function ContactList({ members, previews, selectedId, onSelect, loading, search, setSearch }) {
+function ContactList({ members, previews, selectedId, onSelect, loading, search, setSearch, mobileShowThread }) {
   // Merge members with preview data
   const contacts = members.map(m => {
     const preview = previews.find(p => p.partner?.userId === m.userId);
@@ -249,7 +257,7 @@ function ContactList({ members, previews, selectedId, onSelect, loading, search,
   );
 
   return (
-    <div className="w-64 flex-shrink-0 flex flex-col bg-white border-r border-[#E5E7EB]">
+    <div className={`${mobileShowThread ? 'hidden sm:flex' : 'flex'} flex-col bg-white border-r border-[#E5E7EB] w-full sm:w-64 flex-shrink-0`}>
       <div className="px-3 py-3 border-b border-[#E5E7EB]">
         <div className="flex items-center gap-2 bg-[#F3F4F6] rounded-xl px-3 py-2">
           <Search size={13} className="text-[#9CA3AF] shrink-0" />
@@ -495,6 +503,7 @@ export default function MessagesPage() {
   const [selected, setSelected]  = useState(null);
   const [search,   setSearch]    = useState('');
   const [membersLoading, setMembersLoading] = useState(true);
+  const [mobileShowThread, setMobileShowThread] = useState(false);
 
   const fetchTeamData = useCallback(async () => {
     if (isClient) return;
@@ -542,13 +551,13 @@ export default function MessagesPage() {
         {isAdmin && (
           <div className="flex rounded-xl border border-[#E5E7EB] overflow-hidden text-xs font-semibold">
             <button
-              onClick={() => setActiveTab('clients')}
+              onClick={() => { setActiveTab('clients'); setMobileShowThread(false); }}
               className={`px-3 py-1.5 transition-colors ${activeTab === 'clients' ? 'bg-[#0F4C5C] text-white' : 'text-[#6B7280] hover:bg-[#F3F4F6]'}`}
             >
               Clients
             </button>
             <button
-              onClick={() => setActiveTab('team')}
+              onClick={() => { setActiveTab('team'); setMobileShowThread(false); }}
               className={`px-3 py-1.5 transition-colors ${activeTab === 'team' ? 'bg-[#4A7C59] text-white' : 'text-[#6B7280] hover:bg-[#F3F4F6]'}`}
             >
               Team
@@ -572,16 +581,20 @@ export default function MessagesPage() {
               members={members}
               previews={previews}
               selectedId={selected?.userId}
-              onSelect={(m) => { setSelected(m); setSearch(''); }}
+              onSelect={(m) => { setSelected(m); setSearch(''); setMobileShowThread(true); }}
               loading={membersLoading}
               search={search}
               setSearch={setSearch}
+              mobileShowThread={mobileShowThread}
             />
-            <DMThread
-              partner={selected}
-              currentUser={user}
-              tenantMembers={members}
-            />
+            <div className={`${!mobileShowThread ? 'hidden sm:flex' : 'flex'} flex-1 min-h-0 overflow-hidden`}>
+              <DMThread
+                partner={selected}
+                currentUser={user}
+                tenantMembers={members}
+                onBack={() => setMobileShowThread(false)}
+              />
+            </div>
           </>
         )}
       </div>

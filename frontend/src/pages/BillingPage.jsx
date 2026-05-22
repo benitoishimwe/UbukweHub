@@ -206,7 +206,7 @@ export default function BillingPage() {
 
       {/* ── Invoices ── */}
       <div className="card-prani p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <h2 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest">Payment History</h2>
           <button
             onClick={fetchInvoices}

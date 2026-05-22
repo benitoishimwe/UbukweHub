@@ -220,7 +220,7 @@ function RecentTransactions({ transactions }) {
   const navigate = useNavigate();
   return (
     <div className="card-wedding p-6 animate-slide-up stagger-2 lg:col-span-2">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h2 className="text-base font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>
           Recent Activity
         </h2>

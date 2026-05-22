@@ -765,7 +765,7 @@ export default function SaveTheDatePage() {
     <SubscriptionGate feature="save_the_date">
       <div className="p-4 md:p-8 max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'Georgia, serif' }}>
               Save-the-Date Studio

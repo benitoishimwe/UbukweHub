@@ -502,7 +502,7 @@ export default function TransactionsPage() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>
             Transactions

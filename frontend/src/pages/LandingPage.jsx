@@ -126,7 +126,7 @@ function HeroSection() {
             <Sparkles size={14} className="text-[#E67E22]" />
             AI-powered event planning platform
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6" style={{fontFamily:'Poppins,sans-serif'}}>
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight mb-6" style={{fontFamily:'Poppins,sans-serif'}}>
             Plan with<br />
             <span className="text-[#E67E22]">confidence</span>,<br />
             your way.
