@@ -120,47 +120,58 @@ function NavBar() {
 function HeroSection() {
   return (
     <section className="hero-section pt-16">
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 md:py-36 text-white">
-        <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur border border-white/20 text-sm font-medium mb-8">
-            <Sparkles size={14} className="text-[#E67E22]" />
-            AI-powered event planning platform
+      {/* flex-1 so this area fills space and stats stay pinned at bottom */}
+      <div className="relative z-10 flex-1 flex items-center w-full">
+        <div className="max-w-7xl mx-auto w-full px-6 py-16 md:py-28 text-white">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur border border-white/20 text-sm font-medium mb-8">
+              <Sparkles size={14} className="text-[#E67E22]" />
+              AI-powered event planning platform
+            </div>
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight mb-6" style={{fontFamily:'Poppins,sans-serif'}}>
+              Plan with<br />
+              <span className="text-[#E67E22]">confidence</span>,<br />
+              your way.
+            </h1>
+            <p className="text-lg sm:text-xl text-white/80 mb-10 max-w-xl leading-relaxed">
+              Prani is the all-in-one platform for event planning businesses — from intimate weddings to large-scale corporate conferences, anywhere in the world.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link to="/login" className="btn-amber px-8 py-4 text-base flex items-center justify-center gap-2 shadow-lg">
+                Start free trial
+                <ArrowRight size={18} />
+              </Link>
+              <a href="#features" className="px-8 py-4 text-base font-semibold rounded-full border-2 border-white/30 text-white hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                See all features
+              </a>
+            </div>
+            <p className="text-sm text-white/50 mt-4">No credit card required · 14-day free trial · Cancel anytime</p>
           </div>
-          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight mb-6" style={{fontFamily:'Poppins,sans-serif'}}>
-            Plan with<br />
-            <span className="text-[#E67E22]">confidence</span>,<br />
-            your way.
-          </h1>
-          <p className="text-xl text-white/80 mb-10 max-w-xl leading-relaxed">
-            Prani is the all-in-one platform for event planning businesses — from intimate weddings to large-scale corporate conferences, anywhere in the world.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link to="/login" className="btn-amber px-8 py-4 text-base flex items-center justify-center gap-2 shadow-lg">
-              Start free trial
-              <ArrowRight size={18} />
-            </Link>
-            <a href="#features" className="px-8 py-4 text-base font-semibold rounded-full border-2 border-white/30 text-white hover:bg-white/10 transition-all flex items-center justify-center gap-2">
-              See all features
-            </a>
-          </div>
-          <p className="text-sm text-white/50 mt-4">No credit card required · 14-day free trial · Cancel anytime</p>
         </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="relative z-10 bg-white/10 backdrop-blur border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-white text-center">
+      {/* Stats bar — pinned to the bottom of the hero */}
+      <div className="relative z-10 w-full bg-white/10 backdrop-blur border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-2 sm:grid-cols-4 text-white text-center">
           {[
-            { n: '500+', l: 'Events Planned' },
-            { n: '1,200+', l: 'Happy Clients' },
-            { n: '98%', l: 'AI Accuracy' },
-            { n: '20+', l: 'Countries' },
-          ].map(({ n, l }) => (
-            <div key={l}>
-              <p className="text-3xl font-bold text-[#E67E22]" style={{fontFamily:'Poppins,sans-serif'}}>{n}</p>
-              <p className="text-sm text-white/60 mt-1">{l}</p>
-            </div>
-          ))}
+            { n: '500+',   l: 'Events Planned' },
+            { n: '1,200+', l: 'Happy Clients'  },
+            { n: '98%',    l: 'AI Accuracy'    },
+            { n: '20+',    l: 'Countries'      },
+          ].map(({ n, l }, i) => {
+            const borders = [
+              'border-r border-b border-white/10 sm:border-b-0',
+              'border-b border-white/10 sm:border-r sm:border-b-0',
+              'border-r border-white/10',
+              '',
+            ][i];
+            return (
+              <div key={l} className={`px-4 py-4 ${borders}`}>
+                <p className="text-2xl sm:text-3xl font-bold text-[#E67E22] leading-tight" style={{fontFamily:'Poppins,sans-serif'}}>{n}</p>
+                <p className="text-xs sm:text-sm text-white/60 mt-1">{l}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
