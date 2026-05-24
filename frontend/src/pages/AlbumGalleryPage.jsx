@@ -227,10 +227,14 @@ export default function AlbumGalleryPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {filteredMedia.map(m => (
-            <div key={m.mediaId} className="relative aspect-square rounded-xl overflow-hidden bg-[#EBE5DB] group">
+            <div
+              key={m.mediaId}
+              className="relative aspect-square rounded-xl overflow-hidden bg-[#EBE5DB] group cursor-pointer"
+              onClick={() => setLightbox(m)}
+            >
               {m.mediaType === 'image' ? (
                 <img
-                  src={`${BASE_URL}${m.fileUrl}`}
+                  src={m.fileUrl}
                   alt={m.originalName}
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -246,20 +250,20 @@ export default function AlbumGalleryPage() {
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-end justify-between p-1.5 opacity-0 group-hover:opacity-100">
                 <div className="flex gap-1">
                   <button
-                    onClick={() => setLightbox(m)}
+                    onClick={e => { e.stopPropagation(); setLightbox(m); }}
                     className="w-7 h-7 rounded-lg bg-white/90 flex items-center justify-center hover:bg-white"
                   >
                     <ZoomIn size={13} className="text-[#2D2D2D]" />
                   </button>
                   <button
-                    onClick={() => deleteMedia(m.mediaId)}
+                    onClick={e => { e.stopPropagation(); deleteMedia(m.mediaId); }}
                     className="w-7 h-7 rounded-lg bg-white/90 flex items-center justify-center hover:bg-white"
                   >
                     <Trash2 size={13} className="text-[#D9534F]" />
                   </button>
                 </div>
                 <button
-                  onClick={() => toggleFav(m.mediaId)}
+                  onClick={e => { e.stopPropagation(); toggleFav(m.mediaId); }}
                   className="w-7 h-7 rounded-lg bg-white/90 flex items-center justify-center hover:bg-white"
                 >
                   <Heart size={13} className={m.isFavorite ? 'text-[#C9A84C] fill-[#C9A84C]' : 'text-[#5C5C5C]'} />
@@ -333,13 +337,13 @@ export default function AlbumGalleryPage() {
           <div onClick={e => e.stopPropagation()} className="max-w-3xl w-full">
             {lightbox.mediaType === 'image' ? (
               <img
-                src={`${BASE_URL}${lightbox.fileUrl}`}
+                src={lightbox.fileUrl}
                 alt={lightbox.originalName}
                 className="w-full max-h-[80vh] object-contain rounded-xl"
               />
             ) : (
               <video
-                src={`${BASE_URL}${lightbox.fileUrl}`}
+                src={lightbox.fileUrl}
                 controls
                 className="w-full max-h-[80vh] rounded-xl"
               />
