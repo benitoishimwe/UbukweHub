@@ -84,7 +84,7 @@ export default function AlbumGalleryPage() {
   };
 
   const toggleFav = async (mediaId) => {
-    const res = await api.put(`/albums/${data.album.albumId}/media/${mediaId}/favorite`);
+    const res = await api.post(`/albums/${data.album.albumId}/media/${mediaId}/favorite`);
     setData(prev => ({
       ...prev,
       media: prev.media.map(m => m.mediaId === mediaId ? res.data : m),
