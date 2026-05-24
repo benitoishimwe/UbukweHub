@@ -14,6 +14,7 @@ export default function GuestUploadPage() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({});
   const [done, setDone] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef();
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function GuestUploadPage() {
     if (!files.length) return;
     setUploading(true);
 
+    setUploadError(null);
     try {
       for (let i = 0; i < files.length; i++) {
         const f = files[i];
@@ -61,7 +63,7 @@ export default function GuestUploadPage() {
       setDone(true);
       files.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); });
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Upload failed. Please try again.');
+      setUploadError(err.response?.data?.message || err.response?.data?.error || 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -226,6 +228,17 @@ export default function GuestUploadPage() {
                 className="h-full bg-[#C9A84C] rounded-full transition-all duration-300"
                 style={{ width: `${progress.overall}%` }}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Upload error */}
+        {uploadError && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+            <X className="text-red-500 flex-shrink-0 mt-0.5" size={16} />
+            <div>
+              <p className="text-red-700 text-sm font-semibold">Upload failed</p>
+              <p className="text-red-600 text-xs mt-0.5">{uploadError}</p>
             </div>
           </div>
         )}
