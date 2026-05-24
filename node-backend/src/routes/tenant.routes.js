@@ -24,17 +24,19 @@ router.get('/me/branding', authenticate, async (req, res, next) => {
 });
 
 // ─── PATCH /api/tenants/me/branding ──────────────────────────────────────────
-// Update branding for the current user's tenant (tenant_admin only).
+// Update branding (and optionally business name) for the current user's tenant.
+// Accessible to tenant_admin — used by the onboarding wizard.
 router.patch('/me/branding', authenticate, requireRole(Roles.TENANT_ADMIN), async (req, res, next) => {
   try {
     if (!req.user.tenantId) return badRequest(res, 'No tenant associated with this account');
-    const { logoUrl, primaryColor } = req.body;
+    const { logoUrl, primaryColor, name } = req.body;
     const updates = {};
     if (logoUrl !== undefined) updates.logoUrl = logoUrl;
     if (primaryColor !== undefined) updates.primaryColor = primaryColor;
+    if (name !== undefined && name.trim()) updates.name = name.trim();
     if (Object.keys(updates).length === 0) return badRequest(res, 'No branding fields provided');
     const tenant = await tenantService.updateTenant(req.user.tenantId, updates);
-    return ok(res, { logoUrl: tenant.logoUrl || null, primaryColor: tenant.primaryColor || null }, 'Branding updated');
+    return ok(res, { logoUrl: tenant.logoUrl || null, primaryColor: tenant.primaryColor || null, name: tenant.name }, 'Branding updated');
   } catch (err) {
     return next(err);
   }
