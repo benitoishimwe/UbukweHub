@@ -9,119 +9,29 @@
 --     (that warning only fires when ALL roles get USING (true))
 --   - anon/authenticated roles still have no policy → still blocked from PostgREST
 --
--- Safe to re-run (IF NOT EXISTS / OR REPLACE).
+-- Safe to re-run: DROP IF EXISTS before each CREATE.
 -- ============================================================
 
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.album_media
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.albums
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.api_keys
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.audit_logs
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.email_otps
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.event_tasks
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.event_types
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.events
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.inventory
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.messages
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.notifications
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.payments
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.prani_schema_history
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.save_the_date_designs
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.shifts
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.subscription_features
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.subscriptions
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.tenant_invitations
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.tenants
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.test_accounts
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.transactions
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.user_sessions
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.users
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.vendor_analytics
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.vendor_favorites
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.vendor_inquiries
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.vendor_onboarding
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.vendor_portfolio
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.vendor_profiles
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.vendor_reviews
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.vendors
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.wedding_budget_items
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.wedding_design_assets
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.wedding_guests
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.wedding_menu_items
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.wedding_plans
-  TO service_role USING (true) WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "backend_only" ON public.wedding_venues
-  TO service_role USING (true) WITH CHECK (true);
+DO $$ DECLARE t text;
+BEGIN
+  FOR t IN SELECT unnest(ARRAY[
+    'album_media','albums','api_keys','audit_logs','email_otps',
+    'event_tasks','event_types','events','inventory','messages',
+    'notifications','payments','prani_schema_history','save_the_date_designs',
+    'shifts','subscription_features','subscriptions','tenant_invitations',
+    'tenants','test_accounts','transactions','user_sessions','users',
+    'vendor_analytics','vendor_favorites','vendor_inquiries','vendor_onboarding',
+    'vendor_portfolio','vendor_profiles','vendor_reviews','vendors',
+    'wedding_budget_items','wedding_design_assets','wedding_guests',
+    'wedding_menu_items','wedding_plans','wedding_venues'
+  ]) LOOP
+    EXECUTE format('DROP POLICY IF EXISTS backend_only ON public.%I', t);
+    EXECUTE format(
+      'CREATE POLICY backend_only ON public.%I TO service_role USING (true) WITH CHECK (true)',
+      t
+    );
+  END LOOP;
+END $$;
 
 -- ─── Verify: should return 0 rows (every table has at least one policy) ───────
 SELECT schemaname, tablename
