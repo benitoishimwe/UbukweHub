@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLang } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { eventsAPI } from '../services/api';
-import { Plus, Search, Calendar, Users, MapPin, Loader, ChevronDown } from 'lucide-react';
+import { Plus, Search, Calendar, Users, MapPin, Loader } from 'lucide-react';
 import EventDetailModal from '../components/events/EventDetailModal';
 
 const STATUS_COLORS = {
@@ -63,11 +64,19 @@ function EventCard({ event, onClick }) {
   );
 }
 
-function EventFormModal({ onClose, onSave }) {
+function EventFormModal({ onClose, onSave, isClient }) {
   const { t } = useLang();
-  const [form, setForm] = useState({ name: '', eventDate: '', venue: '', clientName: '', budget: '', guestCount: '' });
+  const [form, setForm] = useState({ name: '', eventDate: '', venue: '', clientName: '', budget: '', currency: 'RWF', guestCount: '', eventTypeSlug: '' });
+  const [eventTypes, setEventTypes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    eventsAPI.getTypes().then(res => setEventTypes(res.data || [])).catch(() => {});
+  }, []);
+
+  const isWedding = form.eventTypeSlug === 'wedding';
+  const namePlaceholder = isWedding ? 'e.g. Uwase & Nkurunziza Wedding' : 'e.g. Annual Company Gala';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -80,7 +89,9 @@ function EventFormModal({ onClose, onSave }) {
         venue: form.venue || undefined,
         clientName: form.clientName || undefined,
         budget: form.budget ? Number(form.budget) : undefined,
+        currency: form.currency || 'RWF',
         guestCount: form.guestCount ? Number(form.guestCount) : undefined,
+        eventTypeSlug: form.eventTypeSlug || undefined,
       });
       onSave(data);
     } catch (err) {
@@ -99,8 +110,29 @@ function EventFormModal({ onClose, onSave }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
+              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Event Type</label>
+              <select
+                className="input-wedding"
+                value={form.eventTypeSlug}
+                onChange={(e) => setForm({ ...form, eventTypeSlug: e.target.value, name: '' })}
+                data-testid="event-type-select"
+              >
+                <option value="">Select event type…</option>
+                {eventTypes.map(et => (
+                  <option key={et.slug} value={et.slug}>{et.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-2">
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.event_name')}</label>
-              <input className="input-wedding" placeholder="Uwase & Nkurunziza Wedding" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required data-testid="event-name-input" />
+              <input
+                className="input-wedding"
+                placeholder={namePlaceholder}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                data-testid="event-name-input"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.event_date')}</label>
@@ -110,17 +142,40 @@ function EventFormModal({ onClose, onSave }) {
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.venue')}</label>
               <input className="input-wedding" placeholder="Kigali Serena Hotel" value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} required data-testid="event-venue-input" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.client')}</label>
-              <input className="input-wedding" placeholder="Client name" value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} data-testid="event-client-input" />
-            </div>
+            {!isClient && (
+              <div>
+                <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.client')}</label>
+                <input className="input-wedding" placeholder="Client name" value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} data-testid="event-client-input" />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.guests')}</label>
               <input className="input-wedding" type="number" placeholder="200" value={form.guestCount} onChange={(e) => setForm({ ...form, guestCount: e.target.value })} data-testid="event-guests-input" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">{t('events.budget')} (RWF)</label>
-              <input className="input-wedding" type="number" placeholder="10000000" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} data-testid="event-budget-input" />
+              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Budget ({form.currency})</label>
+              <div className="grid gap-2" style={{ gridTemplateColumns: '140px 1fr' }}>
+                <select
+                  className="input-wedding"
+                  value={form.currency}
+                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                  data-testid="event-currency-select"
+                >
+                  <option value="RWF">RWF (Frw)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                </select>
+                <input
+                  className="input-wedding"
+                  type="number"
+                  placeholder="0"
+                  min="0"
+                  value={form.budget}
+                  onChange={(e) => setForm({ ...form, budget: e.target.value })}
+                  data-testid="event-budget-input"
+                />
+              </div>
             </div>
           </div>
           {error && <p className="text-sm text-[#D9534F]" data-testid="event-error">{error}</p>}
@@ -138,6 +193,7 @@ function EventFormModal({ onClose, onSave }) {
 
 export default function EventsPage() {
   const { t } = useLang();
+  const { isClient } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -174,10 +230,10 @@ export default function EventsPage() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C5C5C]" />
+        <div className="flex items-center gap-2.5 flex-1 bg-white border border-[#EBE5DB] rounded-xl px-3.5 focus-within:border-[#C9A84C] focus-within:ring-2 focus-within:ring-[#C9A84C]/20 transition-all">
+          <Search size={18} className="text-[#5C5C5C] flex-shrink-0" />
           <input
-            className="input-wedding pl-10"
+            className="flex-1 py-2.5 text-sm text-[#2D2D2D] placeholder-[#9CA3AF] outline-none bg-transparent"
             placeholder="Search events..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -217,7 +273,7 @@ export default function EventsPage() {
       )}
 
       {showModal && (
-        <EventFormModal onClose={() => setShowModal(false)} onSave={(ev) => { setEvents([ev, ...events]); setShowModal(false); }} />
+        <EventFormModal isClient={isClient} onClose={() => setShowModal(false)} onSave={(ev) => { setEvents([ev, ...events]); setShowModal(false); }} />
       )}
       {selectedEvent && (
         <EventDetailModal

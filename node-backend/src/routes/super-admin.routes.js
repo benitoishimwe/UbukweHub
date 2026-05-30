@@ -116,6 +116,127 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
+// ── All-users listing (platform-wide) ────────────────────────────────────────
+
+/**
+ * GET /api/super-admin/users
+ * Returns all platform users with tenant context, role, category, and plan.
+ * Query params: search, category (all|tenant_member|free_trial|standalone), role, page, size
+ */
+router.get('/users', async (req, res, next) => {
+  try {
+    const { search, category, role, page: rawPage, size: rawSize } = req.query;
+    const page = Math.max(1, parseInt(rawPage, 10) || 1);
+    const size = Math.min(100, Math.max(1, parseInt(rawSize, 10) || 50));
+    const skip = (page - 1) * size;
+
+    // Every standalone user gets a 14-day free trial from their signup date.
+    // After that window they fall back to the free tier.
+    const TRIAL_DAYS = 14;
+    const trialCutoff = new Date();
+    trialCutoff.setDate(trialCutoff.getDate() - TRIAL_DAYS);
+
+    // Build conditions with AND so search + category filters compose correctly
+    const conditions = [];
+
+    if (role) conditions.push({ role });
+
+    if (search) {
+      conditions.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    if (category === 'standalone') {
+      // Standalone = no tenant AND trial window has expired AND no active trial subscription
+      conditions.push({ tenantId: null });
+      conditions.push({ createdAt: { lt: trialCutoff } });
+      conditions.push({ subscriptions: { none: { status: 'trial' } } });
+    } else if (category === 'tenant_member') {
+      conditions.push({ tenantId: { not: null } });
+      conditions.push({ subscriptions: { none: { status: 'trial' } } });
+      conditions.push({ NOT: { tenant: { subscriptionTier: 'trial' } } });
+    } else if (category === 'free_trial') {
+      // Free trial = active subscription with status:'trial'
+      //           OR tenant subscriptionTier is 'trial'
+      //           OR standalone user within 14-day signup window
+      conditions.push({
+        OR: [
+          { subscriptions: { some: { status: 'trial' } } },
+          { tenant: { subscriptionTier: 'trial' } },
+          { tenantId: null, createdAt: { gte: trialCutoff } },
+        ],
+      });
+    }
+
+    const where = conditions.length > 0 ? { AND: conditions } : {};
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: size,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          userId: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+          tenantId: true,
+          tenant: {
+            select: { name: true, slug: true, subscriptionTier: true, isActive: true },
+          },
+          subscriptions: {
+            where: { status: { in: ['active', 'trial'] } },
+            select: { status: true, plan: true, trialEndsAt: true },
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    const categorized = users.map(u => {
+      const activeSub = u.subscriptions?.[0];
+      const hasDbTrial    = activeSub?.status === 'trial' || u.tenant?.subscriptionTier === 'trial';
+      const inSignupWindow = !u.tenantId && new Date(u.createdAt) >= trialCutoff;
+      const isOnTrial     = hasDbTrial || inSignupWindow;
+
+      // Compute trial days remaining for display
+      let trialDaysLeft = null;
+      if (activeSub?.trialEndsAt) {
+        const diff = new Date(activeSub.trialEndsAt) - new Date();
+        trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+      } else if (inSignupWindow) {
+        const elapsed = Math.floor((Date.now() - new Date(u.createdAt)) / (1000 * 60 * 60 * 24));
+        trialDaysLeft = Math.max(0, TRIAL_DAYS - elapsed);
+      }
+
+      return {
+        ...u,
+        subscriptions: undefined,
+        activeSubscription: activeSub ?? null,
+        trialDaysLeft,
+        category: isOnTrial
+          ? 'free_trial'
+          : u.tenantId
+            ? 'tenant_member'
+            : 'standalone',
+      };
+    });
+
+    return res.json({ users: categorized, total, page, size, totalPages: Math.ceil(total / size) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── Tenant management ─────────────────────────────────────────────────────────
 
 /**

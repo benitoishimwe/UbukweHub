@@ -30,12 +30,14 @@ function tenantScope(tenantId) {
  * @param {number} [params.page=1]
  * @param {number} [params.size=20]
  */
-async function listEvents({ tenantId, status, eventTypeSlug, search, page = 1, size = 20 }) {
+async function listEvents({ tenantId, clientId, createdBy, status, eventTypeSlug, search, page = 1, size = 20 }) {
   const skip = (page - 1) * size;
 
   // Use raw SQL to bypass Prisma TIMESTAMPTZ deserialization issue
   const conditions = [];
   if (tenantId) conditions.push(Prisma.sql`tenant_id = ${tenantId}`);
+  if (clientId) conditions.push(Prisma.sql`client_id = ${clientId}`);
+  if (createdBy) conditions.push(Prisma.sql`created_by = ${createdBy}`);
   if (status) conditions.push(Prisma.sql`status = ${status}`);
   if (eventTypeSlug) conditions.push(Prisma.sql`event_type_slug = ${eventTypeSlug}`);
   if (search) {
@@ -94,7 +96,7 @@ async function listEvents({ tenantId, status, eventTypeSlug, search, page = 1, s
  * @param {string} eventId
  * @param {string|null} tenantId  - null for super_admin (bypasses tenant check)
  */
-async function getEventById(eventId, tenantId) {
+async function getEventById(eventId, tenantId, clientId) {
   const rows = await prisma.$queryRaw(Prisma.sql`
     SELECT
       event_id            AS "eventId",
@@ -128,6 +130,7 @@ async function getEventById(eventId, tenantId) {
   const event = rows[0];
   if (!event) throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
   if (tenantId && event.tenantId !== tenantId) throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
+  if (clientId && !tenantId && event.clientId !== clientId) throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
 
   return event;
 }
@@ -152,6 +155,7 @@ async function createEvent({
   budget,
   guestCount,
   notes,
+  createdBy,
 }) {
   name        = stripNullBytes(name);
   venue       = stripNullBytes(venue);
@@ -177,7 +181,7 @@ async function createEvent({
   const rows = await prisma.$queryRaw(Prisma.sql`
     INSERT INTO events (
       tenant_id, name, event_date, venue, client_id, client_name,
-      event_type_slug, budget, guest_count, notes, checklist, timeline, status
+      event_type_slug, budget, guest_count, notes, checklist, timeline, status, created_by
     ) VALUES (
       ${tenantId}, ${name}, ${eventDateStr},
       ${venue || null}, ${clientId || null}, ${clientName || null},
@@ -187,7 +191,8 @@ async function createEvent({
       ${notes || null},
       ${checklistStr}::jsonb,
       ${timelineStr}::jsonb,
-      'planning'
+      'planning',
+      ${createdBy || null}
     )
     RETURNING
       event_id        AS "eventId",
@@ -202,6 +207,7 @@ async function createEvent({
       guest_count     AS "guestCount",
       notes,
       event_type_slug AS "eventTypeSlug",
+      created_by      AS "createdBy",
       created_at::text AS "createdAt",
       updated_at::text AS "updatedAt"
   `);
@@ -383,8 +389,11 @@ async function generateEventPdf(eventId, tenantId) {
  *
  * @param {string|null} tenantId
  */
-async function getEventStats(tenantId) {
-  const where = tenantScope(tenantId);
+async function getEventStats(tenantId, createdBy) {
+  const where = {
+    ...tenantScope(tenantId),
+    ...(createdBy ? { createdBy } : {}),
+  };
 
   const [planning, active, completed, cancelled, total] = await Promise.all([
     prisma.event.count({ where: { ...where, status: 'planning' } }),

@@ -3,12 +3,14 @@ import { useLang } from '../contexts/LanguageContext';
 import { adminAPI } from '../services/api';
 import { ShieldCheck, Users, FileText, Search, Loader, CheckCircle, XCircle, Trash2, Plus, ChevronDown } from 'lucide-react';
 
-const ROLES = ['client', 'vendor', 'staff', 'admin'];
+const ROLES = ['client', 'vendor', 'staff', 'event_manager', 'admin'];
 const roleColors = {
-  admin: 'bg-[#FBE9E7] text-[#BF360C]',
-  staff: 'bg-[#E8F5EE] text-[#4A7C59]',
-  client: 'bg-[#E3F2FD] text-[#1565C0]',
-  vendor: 'bg-[#FFF8E1] text-[#C9A84C]',
+  tenant_admin:  'bg-[#FBE9E7] text-[#BF360C]',
+  admin:         'bg-[#FBE9E7] text-[#BF360C]',
+  event_manager: 'bg-[#EDE7F6] text-[#6A1B9A]',
+  staff:         'bg-[#E8F5EE] text-[#4A7C59]',
+  client:        'bg-[#E3F2FD] text-[#1565C0]',
+  vendor:        'bg-[#FFF8E1] text-[#C9A84C]',
 };
 
 function UserRow({ user, onUpdate, onDelete, isOpen, onToggle }) {

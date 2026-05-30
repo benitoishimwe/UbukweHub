@@ -86,6 +86,7 @@ export const eventsAPI = {
   update: (id, data) => api.patch(`/events/${id}`, data),
   delete: (id) => api.delete(`/events/${id}`),
   stats: () => api.get('/events/stats'),
+  getTypes: () => api.get('/events/types'),
   getReport: (id) => api.get(`/events/${id}/report`, { responseType: 'blob' }),
   // Tasks
   listTasks:        (eventId, params) => api.get(`/events/${eventId}/tasks`, { params }),
@@ -137,6 +138,7 @@ export const vendorsAPI = {
 // Vendor self-service — legacy /me routes (kept for backward compat)
 export const vendorMeAPI = {
   me: () => api.get('/vendors/me'),
+  init: (data) => api.post('/vendors/me/init', data),
   updateMe: (data) => api.patch('/vendors/me', data),
   reviews: (params) => api.get('/vendors/me/reviews', { params }),
   inquiries: (params) => api.get('/vendors/me/inquiries', { params }),
@@ -227,6 +229,8 @@ export const plannerAPI = {
 export const superAdminAPI = {
   stats: () => api.get('/super-admin/stats'),
   plans: () => api.get('/super-admin/plans'),
+  // All users (platform-wide)
+  listAllUsers: (params) => api.get('/super-admin/users', { params }),
   // Tenants
   listTenants: (params) => api.get('/super-admin/tenants', { params }),
   createTenant: (data) => api.post('/super-admin/tenants', data),

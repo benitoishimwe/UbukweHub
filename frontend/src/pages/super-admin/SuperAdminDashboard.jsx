@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { superAdminAPI } from '../../services/api';
-import { Building2, Users, LayoutDashboard, FileText, LogOut, ShieldAlert, CreditCard, FlaskConical, MessageSquare } from 'lucide-react';
+import { Building2, Users, LayoutDashboard, FileText, LogOut, ShieldAlert, CreditCard, FlaskConical, MessageSquare, UserX } from 'lucide-react';
 
 const NAV = [
   { label: 'Dashboard',       path: '/super-admin',                    icon: LayoutDashboard },
+  { label: 'All Users',       path: '/super-admin/users',              icon: Users },
   { label: 'Tenants',         path: '/super-admin/tenants',             icon: Building2 },
   { label: 'Subscriptions',   path: '/super-admin/subscriptions',       icon: CreditCard },
   { label: 'Support Tickets', path: '/super-admin/support',             icon: MessageSquare },
@@ -121,31 +122,36 @@ export default function SuperAdminDashboard({ children }) {
         {children ?? (
           <>
             <h1 className="text-2xl font-bold text-[#2D2D2D] mb-6">Platform Overview</h1>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+
+            {/* Tenant stats */}
+            <p className="text-xs font-semibold text-[#5C5C5C] uppercase tracking-wider mb-2">Tenants</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <StatCard label="Total Tenants" value={stats?.total_tenants} icon={Building2} color="bg-[#C9A84C]" />
               <StatCard label="Active Tenants" value={stats?.active_tenants} icon={Building2} color="bg-[#4A7C59]" />
+            </div>
+
+            {/* User stats */}
+            <p className="text-xs font-semibold text-[#5C5C5C] uppercase tracking-wider mb-2">Users</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
               <StatCard label="Total Users" value={stats?.total_users} icon={Users} color="bg-[#1565C0]" />
+              <StatCard label="Tenant Members" value={stats?.tenant_users} icon={Building2} color="bg-[#4A7C59]" />
+              <StatCard label="Free Trial" value={stats?.trial_users} icon={FlaskConical} color="bg-[#C9A84C]" />
+              <StatCard label="Standalone" value={stats?.standalone_users} icon={UserX} color="bg-[#6B7280]" />
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#EBE5DB]">
               <h2 className="font-semibold text-[#2D2D2D] mb-4">Quick Actions</h2>
               <div className="flex flex-wrap gap-3">
-                <Link
-                  to="/super-admin/tenants"
-                  className="px-4 py-2 bg-[#C9A84C] text-white rounded-xl text-sm font-medium hover:bg-[#b8943f] transition-colors"
-                >
+                <Link to="/super-admin/users" className="px-4 py-2 bg-[#C9A84C] text-white rounded-xl text-sm font-medium hover:bg-[#b8943f] transition-colors">
+                  View All Users
+                </Link>
+                <Link to="/super-admin/tenants" className="px-4 py-2 border border-[#EBE5DB] text-[#2D2D2D] rounded-xl text-sm font-medium hover:bg-[#F5F0E8] transition-colors">
                   Manage Tenants
                 </Link>
-                <Link
-                  to="/super-admin/support"
-                  className="px-4 py-2 border border-[#EBE5DB] text-[#2D2D2D] rounded-xl text-sm font-medium hover:bg-[#F5F0E8] transition-colors"
-                >
+                <Link to="/super-admin/support" className="px-4 py-2 border border-[#EBE5DB] text-[#2D2D2D] rounded-xl text-sm font-medium hover:bg-[#F5F0E8] transition-colors">
                   Support Tickets
                 </Link>
-                <Link
-                  to="/super-admin/audit-logs"
-                  className="px-4 py-2 border border-[#EBE5DB] text-[#2D2D2D] rounded-xl text-sm font-medium hover:bg-[#F5F0E8] transition-colors"
-                >
+                <Link to="/super-admin/audit-logs" className="px-4 py-2 border border-[#EBE5DB] text-[#2D2D2D] rounded-xl text-sm font-medium hover:bg-[#F5F0E8] transition-colors">
                   View Audit Logs
                 </Link>
               </div>

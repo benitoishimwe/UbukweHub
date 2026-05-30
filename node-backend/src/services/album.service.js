@@ -21,7 +21,9 @@ const STORAGE_BUCKET = 'albums';
  */
 async function listAlbums({ tenantId, eventId, page = 1, size = 20 }) {
   const skip = (page - 1) * size;
-  const where = { tenantId };
+  // Only include tenantId in the filter when it is provided — self-serve clients
+  // (no tenant) are scoped by eventId alone to avoid matching all null-tenant albums.
+  const where = tenantId ? { tenantId } : {};
   if (eventId) where.eventId = eventId;
 
   const [albums, total] = await Promise.all([
@@ -52,7 +54,9 @@ async function listAlbums({ tenantId, eventId, page = 1, size = 20 }) {
 async function getAlbumById(albumId, tenantId) {
   const album = await prisma.album.findUnique({ where: { albumId } });
   if (!album) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
-  if (album.tenantId !== tenantId) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
+  // tenantId=null means caller is a self-serve client; only block mismatched tenant IDs
+  if (tenantId && album.tenantId !== tenantId) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
+  if (!tenantId && album.tenantId) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
   return album;
 }
 
@@ -111,7 +115,8 @@ async function createAlbum({ tenantId, eventId, title, description, maxFileSizeM
 async function updateAlbum(albumId, tenantId, updates) {
   const album = await prisma.album.findUnique({ where: { albumId } });
   if (!album) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
-  if (album.tenantId !== tenantId) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
+  if (tenantId && album.tenantId !== tenantId) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
+  if (!tenantId && album.tenantId) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
 
   const allowed = ['title', 'description', 'isActive', 'maxFileSizeMb', 'allowVideos'];
   const data = {};
@@ -134,7 +139,8 @@ async function deleteAlbum(albumId, tenantId) {
     include: { media: true },
   });
   if (!album) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
-  if (album.tenantId !== tenantId) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
+  if (tenantId && album.tenantId !== tenantId) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
+  if (!tenantId && album.tenantId) throw new AppError('Album not found', 404, 'ALBUM_NOT_FOUND');
 
   // Clean up all files from storage
   for (const media of album.media) {
@@ -266,7 +272,10 @@ async function deleteMedia(mediaId, albumId, tenantId) {
   if (!media || media.albumId !== albumId) {
     throw new AppError('Media not found', 404, 'MEDIA_NOT_FOUND');
   }
-  if (media.album.tenantId !== tenantId) {
+  if (tenantId && media.album.tenantId !== tenantId) {
+    throw new AppError('Media not found', 404, 'MEDIA_NOT_FOUND');
+  }
+  if (!tenantId && media.album.tenantId) {
     throw new AppError('Media not found', 404, 'MEDIA_NOT_FOUND');
   }
 

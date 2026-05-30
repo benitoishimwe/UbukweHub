@@ -40,6 +40,7 @@ import TenantDetailsPage from './pages/super-admin/TenantDetailsPage';
 import AuditLogsPage from './pages/super-admin/AuditLogsPage';
 import SubscriptionsPage from './pages/super-admin/SubscriptionsPage';
 import TestAccountsPage from './pages/super-admin/TestAccountsPage';
+import SuperAdminUsersPage from './pages/super-admin/SuperAdminUsersPage';
 import GuestCheckinPage from './pages/GuestCheckinPage';
 import SupportCenter from './pages/SupportCenter';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
@@ -121,6 +122,9 @@ function AppRouter() {
       {/* Super admin */}
       <Route path="/super-admin" element={
         <ProtectedRoute roles={['super_admin']}><SuperAdminDashboard /></ProtectedRoute>
+      } />
+      <Route path="/super-admin/users" element={
+        <ProtectedRoute roles={['super_admin']}><SuperAdminDashboard><SuperAdminUsersPage /></SuperAdminDashboard></ProtectedRoute>
       } />
       <Route path="/super-admin/tenants" element={
         <ProtectedRoute roles={['super_admin']}><SuperAdminDashboard><TenantsPage /></SuperAdminDashboard></ProtectedRoute>

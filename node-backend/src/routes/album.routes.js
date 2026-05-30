@@ -4,6 +4,7 @@ const { Router } = require('express');
 const multer = require('multer');
 const albumService = require('../services/album.service');
 const { authenticate } = require('../middleware/auth');
+const { Roles } = require('../middleware/rbac');
 const R = require('../utils/response');
 const config = require('../config/env');
 
@@ -17,8 +18,9 @@ const upload = multer({
 // ─── GET / — list albums ──────────────────────────────────────────────────────
 router.get('/', authenticate, async (req, res, next) => {
   try {
+    const isClient = req.user.role === Roles.CLIENT;
     const tenantId = req.user.tenantId;
-    if (!tenantId) return R.badRequest(res, 'Tenant context required');
+    if (!tenantId && !isClient) return R.badRequest(res, 'Tenant context required');
 
     const { eventId, page, size } = req.query;
     const result = await albumService.listAlbums({
@@ -37,8 +39,9 @@ router.get('/', authenticate, async (req, res, next) => {
 // ─── POST / — create album ────────────────────────────────────────────────────
 router.post('/', authenticate, async (req, res, next) => {
   try {
+    const isClient = req.user.role === Roles.CLIENT;
     const tenantId = req.user.tenantId;
-    if (!tenantId) return R.badRequest(res, 'Tenant context required');
+    if (!tenantId && !isClient) return R.badRequest(res, 'Tenant context required');
 
     const { eventId, title, description, maxFileSizeMb, allowVideos } = req.body;
     if (!eventId) return R.badRequest(res, 'eventId is required');
@@ -91,8 +94,6 @@ router.post('/public/:token/upload', upload.single('file'), async (req, res, nex
 router.get('/:albumId', authenticate, async (req, res, next) => {
   try {
     const tenantId = req.user.tenantId;
-    if (!tenantId) return R.badRequest(res, 'Tenant context required');
-
     const album = await albumService.getAlbumById(req.params.albumId, tenantId);
     return R.ok(res, album);
   } catch (err) {
@@ -104,8 +105,6 @@ router.get('/:albumId', authenticate, async (req, res, next) => {
 router.patch('/:albumId', authenticate, async (req, res, next) => {
   try {
     const tenantId = req.user.tenantId;
-    if (!tenantId) return R.badRequest(res, 'Tenant context required');
-
     const album = await albumService.updateAlbum(req.params.albumId, tenantId, req.body);
     return R.ok(res, album, 'Album updated');
   } catch (err) {
@@ -117,8 +116,6 @@ router.patch('/:albumId', authenticate, async (req, res, next) => {
 router.delete('/:albumId', authenticate, async (req, res, next) => {
   try {
     const tenantId = req.user.tenantId;
-    if (!tenantId) return R.badRequest(res, 'Tenant context required');
-
     await albumService.deleteAlbum(req.params.albumId, tenantId);
     return R.noContent(res);
   } catch (err) {
@@ -147,9 +144,6 @@ router.post('/:albumId/media', authenticate, upload.single('file'), async (req, 
   try {
     if (!req.file) return R.badRequest(res, 'File is required');
 
-    const tenantId = req.user.tenantId;
-    if (!tenantId) return R.badRequest(res, 'Tenant context required');
-
     const media = await albumService.uploadMedia({
       albumId: req.params.albumId,
       file: req.file,
@@ -166,8 +160,6 @@ router.post('/:albumId/media', authenticate, upload.single('file'), async (req, 
 router.delete('/:albumId/media/:mediaId', authenticate, async (req, res, next) => {
   try {
     const tenantId = req.user.tenantId;
-    if (!tenantId) return R.badRequest(res, 'Tenant context required');
-
     await albumService.deleteMedia(req.params.mediaId, req.params.albumId, tenantId);
     return R.noContent(res);
   } catch (err) {
@@ -189,10 +181,6 @@ router.post('/:albumId/media/:mediaId/favorite', authenticate, async (req, res, 
 router.get('/:albumId/qrcode', authenticate, async (req, res, next) => {
   try {
     const tenantId = req.user.tenantId;
-    if (!tenantId) return R.badRequest(res, 'Tenant context required');
-
-    // Prefer the origin sent by the browser so the QR code always points to
-    // the real deployed domain rather than the FRONTEND_URL env var default.
     const frontendUrl = req.query.baseUrl || config.frontendUrl;
     const pngBuffer = await albumService.generateAlbumQrCode(
       req.params.albumId,
@@ -212,8 +200,6 @@ router.get('/:albumId/qrcode', authenticate, async (req, res, next) => {
 router.get('/:albumId/download', authenticate, async (req, res, next) => {
   try {
     const tenantId = req.user.tenantId;
-    if (!tenantId) return R.badRequest(res, 'Tenant context required');
-
     await albumService.downloadZip(req.params.albumId, tenantId, res);
   } catch (err) {
     next(err);

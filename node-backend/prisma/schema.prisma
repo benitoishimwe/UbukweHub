@@ -95,7 +95,7 @@ model User {
 
 model Event {
   eventId         String    @id @default(uuid()) @map("event_id") @db.Uuid
-  tenantId        String    @map("tenant_id") @db.Uuid
+  tenantId        String?   @map("tenant_id") @db.Uuid
   name            String
   eventDate       DateTime? @map("event_date") @db.Timestamptz
   venue           String?
@@ -114,12 +114,13 @@ model Event {
   seatingPlan     Json?     @map("seating_plan")
   guestList                    Json?     @map("guest_list")
   budgetBreakdown              Json?     @map("budget_breakdown")
+  createdBy                    String?   @map("created_by") @db.Uuid
   guestCheckinEnabled          Boolean   @default(false) @map("guest_checkin_enabled")
   guestCheckinOtpExpiryMinutes Int       @default(10) @map("guest_checkin_otp_expiry_minutes")
   createdAt                    DateTime  @default(now()) @map("created_at")
   updatedAt                    DateTime  @updatedAt @map("updated_at")
 
-  tenant               Tenant                @relation(fields: [tenantId], references: [tenantId])
+  tenant               Tenant?               @relation(fields: [tenantId], references: [tenantId])
   tasks                EventTask[]
   weddingPlans         WeddingPlan[]
   albums               Album[]
@@ -226,7 +227,7 @@ model Payment {
 
 model Vendor {
   vendorId           String    @id @default(uuid()) @map("vendor_id") @db.Uuid
-  tenantId           String    @map("tenant_id") @db.Uuid
+  tenantId           String?   @map("tenant_id") @db.Uuid
   userId             String?   @unique @map("user_id") @db.Uuid
   name               String
   category           String
@@ -234,6 +235,7 @@ model Vendor {
   email              String?
   phone              String?
   location           String?
+  country            String?
   description        String?
   rating             Decimal   @default(0) @db.Decimal(3, 2)
   ratingCount        Int       @default(0) @map("rating_count")
@@ -250,7 +252,7 @@ model Vendor {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  tenant     Tenant             @relation(fields: [tenantId], references: [tenantId])
+  tenant     Tenant?            @relation(fields: [tenantId], references: [tenantId])
   linkedUser User?              @relation("VendorUser", fields: [userId], references: [userId])
   profile    VendorProfile?
   portfolio  VendorPortfolio[]
@@ -265,7 +267,7 @@ model Vendor {
 
 model VendorProfile {
   profileId           String   @id @default(uuid()) @map("profile_id") @db.Uuid
-  tenantId            String   @map("tenant_id") @db.Uuid
+  tenantId            String?  @map("tenant_id") @db.Uuid
   vendorId            String   @unique @map("vendor_id") @db.Uuid
   bio                 String?
   website             String?
@@ -282,8 +284,8 @@ model VendorProfile {
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [tenantId])
-  vendor Vendor @relation(fields: [vendorId], references: [vendorId])
+  tenant Tenant? @relation(fields: [tenantId], references: [tenantId])
+  vendor Vendor  @relation(fields: [vendorId], references: [vendorId])
 
   @@map("vendor_profiles")
 }
@@ -382,7 +384,7 @@ model VendorAnalytics {
 
 model WeddingPlan {
   planId          String    @id @default(uuid()) @map("plan_id") @db.Uuid
-  tenantId        String    @map("tenant_id") @db.Uuid
+  tenantId        String?   @map("tenant_id") @db.Uuid
   userId          String    @map("user_id") @db.Uuid
   eventId         String?   @map("event_id") @db.Uuid
   weddingDate     DateTime? @map("wedding_date")
@@ -394,7 +396,7 @@ model WeddingPlan {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  tenant       Tenant              @relation(fields: [tenantId], references: [tenantId])
+  tenant       Tenant?             @relation(fields: [tenantId], references: [tenantId])
   user         User                @relation(fields: [userId], references: [userId])
   event        Event?              @relation(fields: [eventId], references: [eventId])
   budgetItems  WeddingBudgetItem[]
@@ -495,7 +497,7 @@ model WeddingDesignAsset {
 
 model Album {
   albumId       String   @id @default(uuid()) @map("album_id") @db.Uuid
-  tenantId      String   @map("tenant_id") @db.Uuid
+  tenantId      String?  @map("tenant_id") @db.Uuid
   eventId       String   @map("event_id") @db.Uuid
   token         String   @unique @db.VarChar(255)
   title         String
@@ -507,7 +509,7 @@ model Album {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant       @relation(fields: [tenantId], references: [tenantId])
+  tenant Tenant?      @relation(fields: [tenantId], references: [tenantId])
   event  Event        @relation(fields: [eventId], references: [eventId])
   media  AlbumMedia[]
 

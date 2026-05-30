@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLang } from '../contexts/LanguageContext';
 import { staffAPI, adminAPI, vendorsAPI } from '../services/api';
 import {
-  Users, Plus, Search, Clock, Calendar, User, Mail, Briefcase,
+  Users, Search, Clock, Calendar, Mail, Briefcase,
   X, Shield, CheckCircle, XCircle, Edit2, Save, Loader, Link2,
   UserPlus, RefreshCw, KeyRound,
 } from 'lucide-react';
@@ -532,80 +532,6 @@ function StaffCard({ member, onViewProfile }) {
   );
 }
 
-// ─── Create Shift Modal ───────────────────────────────────────────────────────
-function CreateShiftModal({ staff, onClose, onSave }) {
-  const [form, setForm] = useState({ staffId: '', role: '', date: '', startTime: '08:00', endTime: '20:00' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const { data } = await staffAPI.createShift({
-        staffId: form.staffId,
-        role: form.role.trim(),
-        date: form.date,
-        startTime: form.startTime,
-        endTime: form.endTime,
-      });
-      onSave(data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create shift');
-    } finally { setLoading(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-scale-in overflow-hidden" data-testid="shift-modal">
-        <div className="px-6 py-5 border-b border-[#EBE5DB] flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>Create Shift</h2>
-          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center text-[#5C5C5C] hover:bg-[#EBE5DB]"><X size={16} /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#5C5C5C] uppercase tracking-wide mb-1.5">Staff Member</label>
-            <select className="input-wedding" value={form.staffId} onChange={(e) => setForm({ ...form, staffId: e.target.value })} required>
-              <option value="">Select staff...</option>
-              {staff.map(s => <option key={s.userId} value={s.userId}>{s.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-[#5C5C5C] uppercase tracking-wide mb-1.5">Role / Task</label>
-            <input className="input-wedding" placeholder="Event Coordinator" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} required />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-[#5C5C5C] uppercase tracking-wide mb-1.5">Date</label>
-            <input className="input-wedding" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-[#5C5C5C] uppercase tracking-wide mb-1.5">Shift Hours</label>
-            <div className="flex items-center gap-3 p-3 bg-[#F9F9FB] rounded-xl border border-[#EBE5DB]">
-              <div className="flex-1">
-                <p className="text-[10px] font-semibold text-[#5C5C5C] mb-1">START</p>
-                <input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="w-full text-sm font-semibold text-[#2D2D2D] bg-transparent outline-none border-none" />
-              </div>
-              <div className="w-px h-8 bg-[#EBE5DB]" />
-              <div className="flex-1">
-                <p className="text-[10px] font-semibold text-[#5C5C5C] mb-1">END</p>
-                <input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="w-full text-sm font-semibold text-[#2D2D2D] bg-transparent outline-none border-none" />
-              </div>
-            </div>
-          </div>
-          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 h-11 rounded-full border-2 border-[#EBE5DB] text-[#5C5C5C] font-medium text-sm hover:border-[#C9A84C]">Cancel</button>
-            <button type="submit" disabled={loading} className="flex-1 btn-gold h-11 flex items-center justify-center text-sm font-semibold">
-              {loading ? <Loader size={14} className="animate-spin mr-1" /> : null} Save Shift
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function StaffPage() {
   const { t } = useLang();
@@ -614,7 +540,6 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('staff');
   const [search, setSearch] = useState('');
-  const [showShiftModal, setShowShiftModal] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
 
@@ -734,14 +659,9 @@ export default function StaffPage() {
           <h1 className="text-3xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'Playfair Display,serif' }}>{t('staff.title')}</h1>
           <p className="text-sm text-[#9C9C9C] mt-0.5">Staff & Event Managers</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowInvite(true)} className="px-5 py-2 rounded-full border-2 border-[#C9A84C] text-[#C9A84C] font-semibold text-sm hover:bg-[#C9A84C10] flex items-center gap-2 transition-all" data-testid="invite-staff-btn">
-            <UserPlus size={18} /> Invite Staff
-          </button>
-          <button onClick={() => setShowShiftModal(true)} className="btn-gold px-5 py-2.5 flex items-center gap-2 text-sm" data-testid="new-shift-btn">
-            <Plus size={18} /> {t('staff.new_shift')}
-          </button>
-        </div>
+        <button onClick={() => setShowInvite(true)} className="px-5 py-2 rounded-full border-2 border-[#C9A84C] text-[#C9A84C] font-semibold text-sm hover:bg-[#C9A84C10] flex items-center gap-2 transition-all" data-testid="invite-staff-btn">
+          <UserPlus size={18} /> Invite Staff
+        </button>
       </div>
 
       {/* Tabs */}
@@ -793,13 +713,6 @@ export default function StaffPage() {
         />
       )}
 
-      {showShiftModal && (
-        <CreateShiftModal
-          staff={staff}
-          onClose={() => setShowShiftModal(false)}
-          onSave={(s) => { setShifts([...shifts, s]); setShowShiftModal(false); }}
-        />
-      )}
       {showInvite && (
         <InviteUserModal
           onClose={() => setShowInvite(false)}

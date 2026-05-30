@@ -17,8 +17,16 @@ router.get('/', authenticate, async (req, res, next) => {
     const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : req.user.tenantId;
     const { status, eventTypeSlug, search, page, size } = req.query;
 
+    // Clients only see their own events (linked by clientId)
+    const clientId = req.user.role === Roles.CLIENT ? req.user.userId : undefined;
+
+    // Event managers only see events they created
+    const createdBy = req.user.role === Roles.EVENT_MANAGER ? req.user.userId : undefined;
+
     const result = await eventService.listEvents({
       tenantId,
+      clientId,
+      createdBy,
       status: status || undefined,
       eventTypeSlug: eventTypeSlug || undefined,
       search: search || undefined,
@@ -36,14 +44,19 @@ router.get('/', authenticate, async (req, res, next) => {
 router.post(
   '/',
   authenticate,
-  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN, Roles.EVENT_MANAGER),
+  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN, Roles.EVENT_MANAGER, Roles.CLIENT),
   async (req, res, next) => {
     try {
+      const isClient = req.user.role === Roles.CLIENT;
       const tenantId = req.user.tenantId;
-      if (!tenantId) return R.badRequest(res, 'Tenant context required');
 
-      const { name, eventDate, venue, clientId, clientName, eventTypeSlug, budget, guestCount, notes } = req.body;
+      // Clients are self-serve and have no tenant; all other roles require one
+      if (!tenantId && !isClient) return R.badRequest(res, 'Tenant context required');
+
+      const { name, eventDate, venue, eventTypeSlug, budget, guestCount, notes } = req.body;
       if (!name) return R.badRequest(res, 'Event name is required');
+      const clientId   = isClient ? req.user.userId   : (req.body.clientId   || null);
+      const clientName = isClient ? req.user.name     : (req.body.clientName || null);
 
       const event = await eventService.createEvent({
         tenantId,
@@ -56,6 +69,7 @@ router.post(
         budget,
         guestCount,
         notes,
+        createdBy: req.user.userId,
       });
 
       return R.created(res, event, 'Event created successfully');
@@ -69,7 +83,8 @@ router.post(
 router.get('/stats', authenticate, async (req, res, next) => {
   try {
     const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : req.user.tenantId;
-    const stats = await eventService.getEventStats(tenantId);
+    const createdBy = req.user.role === Roles.EVENT_MANAGER ? req.user.userId : undefined;
+    const stats = await eventService.getEventStats(tenantId, createdBy);
     return R.ok(res, stats);
   } catch (err) {
     next(err);
@@ -262,7 +277,8 @@ router.post(
 router.get('/:eventId', authenticate, async (req, res, next) => {
   try {
     const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : req.user.tenantId;
-    const event = await eventService.getEventById(req.params.eventId, tenantId);
+    const clientId = req.user.role === Roles.CLIENT ? req.user.userId : undefined;
+    const event = await eventService.getEventById(req.params.eventId, tenantId, clientId);
     return R.ok(res, event);
   } catch (err) {
     next(err);

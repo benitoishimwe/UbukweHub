@@ -294,14 +294,27 @@ async function createTenantAdmin({ tenantId, email, password, name }) {
  * Return high-level platform statistics for the super_admin dashboard.
  */
 async function getPlatformStats() {
-  const [totalTenants, activeTenants, totalUsers, activeUsers] = await Promise.all([
+  // Find tenant IDs on trial plan so we can count trial users
+  const trialTenants = await prisma.tenant.findMany({
+    where: { subscriptionTier: 'trial', isActive: true },
+    select: { tenantId: true },
+  });
+  const trialTenantIds = trialTenants.map(t => t.tenantId);
+
+  const [totalTenants, activeTenants, totalUsers, activeUsers, standaloneUsers, trialUsers] = await Promise.all([
     prisma.tenant.count(),
     prisma.tenant.count({ where: { isActive: true } }),
     prisma.user.count(),
     prisma.user.count({ where: { isActive: true } }),
+    prisma.user.count({ where: { tenantId: null } }),
+    trialTenantIds.length > 0
+      ? prisma.user.count({ where: { tenantId: { in: trialTenantIds } } })
+      : Promise.resolve(0),
   ]);
 
-  return { totalTenants, activeTenants, totalUsers, activeUsers };
+  const tenantUsers = totalUsers - standaloneUsers;
+
+  return { totalTenants, activeTenants, totalUsers, activeUsers, standaloneUsers, tenantUsers, trialUsers };
 }
 
 module.exports = {

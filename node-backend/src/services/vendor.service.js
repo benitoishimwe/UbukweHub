@@ -411,6 +411,42 @@ async function completeOnboardingStep(vendorId, step) {
   return { ...onboarding, [step]: true, allComplete: allDone };
 }
 
+/**
+ * Allow a vendor user to self-create their own profile on signup.
+ * Uses their account email so getVendorByUserId can find them immediately.
+ */
+async function selfCreateVendor(userId, { name, category, phone, location, country }) {
+  const user = await prisma.user.findUnique({
+    where: { userId },
+    select: { email: true, name: true, tenantId: true },
+  });
+  if (!user) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+
+  const existing = await prisma.vendor.findFirst({
+    where: { email: user.email, isActive: true },
+  });
+  if (existing) throw new AppError('A vendor profile already exists for this account', 409, 'VENDOR_EXISTS');
+
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.vendor.create({
+      data: {
+        tenantId:    user.tenantId || null,
+        name:        name || user.name,
+        category,
+        contactName: user.name,
+        email:       user.email,
+        phone:       phone    || null,
+        location:    location || null,
+        country:     country  || null,
+      },
+    });
+    await tx.vendorProfile.create({
+      data: { tenantId: user.tenantId || null, vendorId: created.vendorId },
+    });
+    return created;
+  });
+}
+
 // ─── Vendor portal (self-service) ────────────────────────────────────────────
 
 async function togglePublicVisibility(userId) {
@@ -502,6 +538,7 @@ module.exports = {
   listVendors,
   getVendorById,
   createVendor,
+  selfCreateVendor,
   updateVendor,
   deleteVendor,
   updateVendorProfile,

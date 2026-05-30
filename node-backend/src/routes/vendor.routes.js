@@ -37,6 +37,18 @@ router.get('/me/reviews', authenticate, async (req, res, next) => {
   }
 });
 
+// ─── POST /me/init — vendor self-registration on first signup ────────────────
+router.post('/me/init', authenticate, async (req, res, next) => {
+  try {
+    const { name, category, phone, location, country } = req.body;
+    if (!category) return R.badRequest(res, 'Please select a business category');
+    const vendor = await vendorService.selfCreateVendor(req.user.userId, { name, category, phone, location, country });
+    return R.created(res, vendor, 'Vendor profile created — welcome to Plani!');
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── PATCH /me — vendor self-update ──────────────────────────────────────────
 router.patch('/me', authenticate, async (req, res, next) => {
   try {
