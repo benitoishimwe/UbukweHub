@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useLang } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { adminAPI } from '../services/api';
 import { ShieldCheck, Users, FileText, Search, Loader, CheckCircle, XCircle, Trash2, Plus, ChevronDown } from 'lucide-react';
 
-const ROLES = ['client', 'vendor', 'staff', 'event_manager', 'admin'];
+const ALL_ROLES = ['staff', 'event_manager', 'client', 'vendor', 'admin'];
+const MANAGER_ROLES = ['staff', 'event_manager', 'client', 'vendor'];
 const roleColors = {
   tenant_admin:  'bg-[#FBE9E7] text-[#BF360C]',
   admin:         'bg-[#FBE9E7] text-[#BF360C]',
@@ -13,7 +15,7 @@ const roleColors = {
   vendor:        'bg-[#FFF8E1] text-[#C9A84C]',
 };
 
-function UserRow({ user, onUpdate, onDelete, isOpen, onToggle }) {
+function UserRow({ user, onUpdate, onDelete, isOpen, onToggle, canAssignAdmin }) {
   const [changing, setChanging] = useState(false);
 
   const handleRoleChange = async (newRole) => {
@@ -56,7 +58,7 @@ function UserRow({ user, onUpdate, onDelete, isOpen, onToggle }) {
             className="absolute right-0 bottom-full mb-1 bg-white border border-[#EBE5DB] rounded-xl shadow-xl z-50 w-28 py-1"
             data-testid={`role-dropdown-${user.userId}`}
           >
-            {ROLES.map(r => (
+            {(canAssignAdmin ? ALL_ROLES : MANAGER_ROLES).map(r => (
               <button
                 key={r}
                 onClick={(e) => { e.stopPropagation(); handleRoleChange(r); }}
@@ -97,7 +99,7 @@ function AuditRow({ log }) {
   );
 }
 
-function AddUserModal({ onClose, onSave }) {
+function AddUserModal({ onClose, onSave, canAssignAdmin }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'staff' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -138,10 +140,11 @@ function AddUserModal({ onClose, onSave }) {
           <div>
             <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Role</label>
             <select className="input-wedding" value={form.role} onChange={(e) => setForm({...form, role: e.target.value})} data-testid="new-user-role">
+              <option value="staff">Staff</option>
+              <option value="event_manager">Event Manager</option>
               <option value="client">Client</option>
               <option value="vendor">Vendor</option>
-              <option value="staff">Staff</option>
-              <option value="admin">Admin</option>
+              {canAssignAdmin && <option value="admin">Admin</option>}
             </select>
           </div>
           {error && <p className="text-sm text-[#D9534F]" data-testid="create-user-error">{error}</p>}
@@ -159,6 +162,8 @@ function AddUserModal({ onClose, onSave }) {
 
 export default function AdminPage() {
   const { t } = useLang();
+  const { user } = useAuth();
+  const canAssignAdmin = user?.role !== 'event_manager';
   const [tab, setTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [logs, setLogs] = useState([]);
@@ -168,6 +173,13 @@ export default function AdminPage() {
   const [logSearch, setLogSearch] = useState('');
   const [showAddUser, setShowAddUser] = useState(false);
   const [openRoleUserId, setOpenRoleUserId] = useState(null);
+
+  const refreshStats = async () => {
+    try {
+      const sRes = await adminAPI.stats();
+      setStats(sRes.data || {});
+    } catch (e) { console.error(e); }
+  };
 
   useEffect(() => {
     (async () => {
@@ -187,6 +199,7 @@ export default function AdminPage() {
     try {
       await adminAPI.deleteUser(userId);
       setUsers(users.filter(u => u.userId !== userId));
+      refreshStats();
     } catch (e) { console.error(e); }
   };
 
@@ -254,6 +267,7 @@ export default function AdminPage() {
                 onDelete={handleDeleteUser}
                 isOpen={openRoleUserId === u.userId}
                 onToggle={setOpenRoleUserId}
+                canAssignAdmin={canAssignAdmin}
               />
             ))
           )}
@@ -275,7 +289,7 @@ export default function AdminPage() {
           )}
         </div>
       )}
-      {showAddUser && <AddUserModal onClose={() => setShowAddUser(false)} onSave={(u) => { setUsers([u, ...users]); setShowAddUser(false); }} />}
+      {showAddUser && <AddUserModal onClose={() => setShowAddUser(false)} onSave={(u) => { setUsers([u, ...users]); setShowAddUser(false); refreshStats(); }} canAssignAdmin={canAssignAdmin} />}
     </div>
   );
 }

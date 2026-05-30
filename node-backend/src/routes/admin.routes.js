@@ -19,10 +19,16 @@ const router = express.Router();
 // Individual handlers further restrict by role where necessary.
 const isAdmin = [authenticate, requireRole(Roles.SUPER_ADMIN, Roles.TENANT_ADMIN)];
 
+// event_manager on trial also gets access to user-management routes scoped to their tenant.
+const isAdminOrManager = [authenticate, requireRole(Roles.SUPER_ADMIN, Roles.TENANT_ADMIN, Roles.EVENT_MANAGER)];
+
+// Roles that only super_admin / tenant_admin may assign — event_manager cannot elevate.
+const MANAGER_FORBIDDEN_ROLES = ['tenant_admin', 'super_admin'];
+
 // ─── GET /api/admin/users ─────────────────────────────────────────────────────
 // super_admin: list all users platform-wide.
-// tenant_admin: list users scoped to their own tenant.
-router.get('/users', ...isAdmin, async (req, res, next) => {
+// tenant_admin / event_manager: list users scoped to their own tenant.
+router.get('/users', ...isAdminOrManager, async (req, res, next) => {
   try {
     const { role: callerRole, tenantId: callerTenantId } = req.user;
 
@@ -45,7 +51,7 @@ router.get('/users', ...isAdmin, async (req, res, next) => {
 
 // ─── GET /api/admin/users/:userId ─────────────────────────────────────────────
 // Get a single user by ID.
-router.get('/users/:userId', ...isAdmin, async (req, res, next) => {
+router.get('/users/:userId', ...isAdminOrManager, async (req, res, next) => {
   try {
     const user = await adminService.getUserById(req.params.userId);
     return ok(res, user);
@@ -55,7 +61,7 @@ router.get('/users/:userId', ...isAdmin, async (req, res, next) => {
 });
 
 // ─── POST /api/admin/users/:userId/deactivate ─────────────────────────────────
-router.post('/users/:userId/deactivate', ...isAdmin, async (req, res, next) => {
+router.post('/users/:userId/deactivate', ...isAdminOrManager, async (req, res, next) => {
   try {
     const user = await adminService.deactivateUser(req.params.userId);
     return ok(res, user, 'User has been deactivated');
@@ -65,7 +71,7 @@ router.post('/users/:userId/deactivate', ...isAdmin, async (req, res, next) => {
 });
 
 // ─── POST /api/admin/users/:userId/activate ───────────────────────────────────
-router.post('/users/:userId/activate', ...isAdmin, async (req, res, next) => {
+router.post('/users/:userId/activate', ...isAdminOrManager, async (req, res, next) => {
   try {
     const user = await prisma.user.update({
       where: { userId: req.params.userId },
@@ -101,24 +107,40 @@ router.post(
 );
 
 // ─── POST /api/admin/users ────────────────────────────────────────────────────
-// Create a new user scoped to the tenant-admin's tenant.
-router.post('/users', ...isAdmin, async (req, res, next) => {
+// Create a new user scoped to the caller's tenant.
+// event_manager may not assign tenant_admin or super_admin roles.
+router.post('/users', ...isAdminOrManager, async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
     if (!email || !name) return badRequest(res, 'name and email are required');
 
-    const tenantId =
+    let tenantId =
       req.user.role === Roles.SUPER_ADMIN
         ? req.body.tenantId || req.user.tenantId
         : req.user.tenantId;
 
+    // Standalone event_manager with no tenant yet: auto-provision a personal team tenant.
+    if (!tenantId && req.user.role === Roles.EVENT_MANAGER) {
+      const slug = `team-${req.user.userId.slice(0, 8)}`;
+      const existing = await prisma.tenant.findUnique({ where: { slug } });
+      const tenant = existing ?? await prisma.tenant.create({
+        data: { name: req.user.name || req.user.email, slug, subscriptionTier: 'trial', subscriptionStatus: 'active' },
+      });
+      await prisma.user.update({ where: { userId: req.user.userId }, data: { tenantId: tenant.tenantId } });
+      tenantId = tenant.tenantId;
+    }
+
     if (!tenantId) return badRequest(res, 'Tenant context required');
+
+    const mappedRole = role === 'admin' ? 'tenant_admin' : (role || 'staff');
+    if (req.user.role === Roles.EVENT_MANAGER && MANAGER_FORBIDDEN_ROLES.includes(mappedRole)) {
+      return res.status(403).json({ error: 'FORBIDDEN', message: 'Event managers cannot assign admin roles' });
+    }
 
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (existing) return res.status(409).json({ error: 'CONFLICT', message: 'A user with this email already exists', detail: 'EMAIL_TAKEN' });
 
     const passwordHash = password ? await bcrypt.hash(password, 10) : await bcrypt.hash(Math.random().toString(36).slice(-12), 10);
-    const mappedRole = role === 'admin' ? 'tenant_admin' : (role || 'staff');
 
     const user = await prisma.user.create({
       data: { email: email.toLowerCase().trim(), name, passwordHash, role: mappedRole, tenantId, isActive: true },
@@ -135,10 +157,14 @@ router.post('/users', ...isAdmin, async (req, res, next) => {
 // Update a user's profile or role.
 // When role is set to "vendor", auto-creates a Vendor record (if none exists for that email)
 // so the vendor portal shows a usable profile immediately.
-router.put('/users/:userId', ...isAdmin, async (req, res, next) => {
+router.put('/users/:userId', ...isAdminOrManager, async (req, res, next) => {
   try {
     const { name, role, skills, availability, certifications, vendorCategory } = req.body;
     const mappedRole = role === 'admin' ? 'tenant_admin' : role;
+
+    if (req.user.role === Roles.EVENT_MANAGER && mappedRole && MANAGER_FORBIDDEN_ROLES.includes(mappedRole)) {
+      return res.status(403).json({ error: 'FORBIDDEN', message: 'Event managers cannot assign admin roles' });
+    }
 
     const updateData = {};
     if (name !== undefined) updateData.name = name;
@@ -223,7 +249,8 @@ router.post('/users/:userId/link-vendor', ...isAdmin, async (req, res, next) => 
 
 // ─── POST /api/admin/users/invite ─────────────────────────────────────────────
 // Send an invitation email to a new user.
-router.post('/users/invite', ...isAdmin, async (req, res, next) => {
+// Allowed for super_admin, tenant_admin, and standalone event_manager.
+router.post('/users/invite', authenticate, requireRole(Roles.SUPER_ADMIN, Roles.TENANT_ADMIN, Roles.EVENT_MANAGER), async (req, res, next) => {
   try {
     const { email, role, name } = req.body;
     if (!email || typeof email !== 'string' || !email.trim()) {
@@ -231,9 +258,29 @@ router.post('/users/invite', ...isAdmin, async (req, res, next) => {
     }
     const VALID_ROLES = ['staff', 'event_manager', 'tenant_admin', 'vendor', 'client'];
     const assignedRole = role && VALID_ROLES.includes(role) ? role : 'staff';
-    const tenantId = req.user.role === Roles.SUPER_ADMIN
+    let tenantId = req.user.role === Roles.SUPER_ADMIN
       ? (req.body.tenantId || req.user.tenantId)
       : req.user.tenantId;
+
+    // Standalone event_manager (no tenant yet): auto-provision a personal team tenant
+    if (!tenantId && req.user.role === Roles.EVENT_MANAGER) {
+      const slug = `team-${req.user.userId.slice(0, 8)}`;
+      const existing = await prisma.tenant.findUnique({ where: { slug } });
+      const tenant = existing ?? await prisma.tenant.create({
+        data: {
+          name: req.user.name || req.user.email,
+          slug,
+          subscriptionTier: 'trial',
+          subscriptionStatus: 'active',
+        },
+      });
+      await prisma.user.update({
+        where: { userId: req.user.userId },
+        data: { tenantId: tenant.tenantId },
+      });
+      tenantId = tenant.tenantId;
+    }
+
     if (!tenantId) return badRequest(res, 'Tenant context required');
 
     const invitation = await invitationService.createInvitation({
@@ -261,7 +308,7 @@ router.post('/users/invite', ...isAdmin, async (req, res, next) => {
 
 // ─── POST /api/admin/users/:userId/resend-invite ───────────────────────────────
 // Revoke the existing pending invitation (if any) and send a new one.
-router.post('/users/:userId/resend-invite', ...isAdmin, async (req, res, next) => {
+router.post('/users/:userId/resend-invite', authenticate, requireRole(Roles.SUPER_ADMIN, Roles.TENANT_ADMIN, Roles.EVENT_MANAGER), async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { userId: req.params.userId },
@@ -338,12 +385,16 @@ router.post('/users/:userId/reset-password', ...isAdmin, async (req, res, next) 
 
 // ─── PATCH /api/admin/users/:userId/role ──────────────────────────────────────
 // Change a user's role with audit logging.
-router.patch('/users/:userId/role', ...isAdmin, async (req, res, next) => {
+router.patch('/users/:userId/role', ...isAdminOrManager, async (req, res, next) => {
   try {
     const { role } = req.body;
     const VALID_ROLES = ['staff', 'event_manager', 'tenant_admin', 'vendor', 'client'];
     if (!role || !VALID_ROLES.includes(role)) {
       return badRequest(res, `role must be one of: ${VALID_ROLES.join(', ')}`);
+    }
+
+    if (req.user.role === Roles.EVENT_MANAGER && MANAGER_FORBIDDEN_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'FORBIDDEN', message: 'Event managers cannot assign admin roles' });
     }
 
     const existing = await prisma.user.findUnique({
@@ -380,7 +431,7 @@ router.patch('/users/:userId/role', ...isAdmin, async (req, res, next) => {
 
 // ─── DELETE /api/admin/users/:userId ──────────────────────────────────────────
 // Soft-delete (deactivate) a user.
-router.delete('/users/:userId', ...isAdmin, async (req, res, next) => {
+router.delete('/users/:userId', ...isAdminOrManager, async (req, res, next) => {
   try {
     await adminService.deactivateUser(req.params.userId);
     return res.status(204).end();
@@ -391,21 +442,24 @@ router.delete('/users/:userId', ...isAdmin, async (req, res, next) => {
 
 // ─── GET /api/admin/stats ─────────────────────────────────────────────────────
 // Return counts for the tenant admin's dashboard.
-router.get('/stats', ...isAdmin, async (req, res, next) => {
+router.get('/stats', ...isAdminOrManager, async (req, res, next) => {
   try {
     const { role: callerRole, tenantId: callerTenantId } = req.user;
     const tenantId = callerRole === Roles.SUPER_ADMIN ? req.query.tenantId?.trim() || undefined : callerTenantId;
     const tf = tenantId ? { tenantId } : {};
 
-    const [users, events, inventory, transactions, vendors] = await Promise.all([
-      prisma.user.count({ where: tf }),
+    const [users, events, inventory, transactions, vendors, usersByRoleRaw] = await Promise.all([
+      prisma.user.count({ where: { ...tf, isActive: true } }),
       prisma.event.count({ where: tf }),
       prisma.inventoryItem.count({ where: { ...tf, isActive: true } }),
       prisma.transaction.count({ where: tf }),
       prisma.vendor.count({ where: { ...tf, isActive: true } }),
+      prisma.user.groupBy({ by: ['role'], where: { ...tf, isActive: true }, _count: { role: true } }),
     ]);
 
-    return ok(res, { total_users: users, total_events: events, total_inventory: inventory, total_transactions: transactions, total_vendors: vendors });
+    const users_by_role = Object.fromEntries(usersByRoleRaw.map(r => [r.role, r._count.role]));
+
+    return ok(res, { total_users: users, total_events: events, total_inventory: inventory, total_transactions: transactions, total_vendors: vendors, users_by_role });
   } catch (err) {
     return next(err);
   }
@@ -430,7 +484,7 @@ router.get('/sessions', ...isAdmin, async (req, res, next) => {
 
 // ─── GET /api/admin/audit-logs ────────────────────────────────────────────────
 // List audit logs with optional filters. Paginated.
-router.get('/audit-logs', ...isAdmin, async (req, res, next) => {
+router.get('/audit-logs', ...isAdminOrManager, async (req, res, next) => {
   try {
     const { action, resource } = req.query;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -454,8 +508,8 @@ router.get('/audit-logs', ...isAdmin, async (req, res, next) => {
 });
 
 // ─── GET /api/admin/dashboard ─────────────────────────────────────────────────
-// Dashboard stats scoped by tenant (tenant_admin) or platform-wide (super_admin).
-router.get('/dashboard', ...isAdmin, async (req, res, next) => {
+// Dashboard stats scoped by tenant (tenant_admin / event_manager) or platform-wide (super_admin).
+router.get('/dashboard', ...isAdminOrManager, async (req, res, next) => {
   try {
     const { role: callerRole, tenantId: callerTenantId } = req.user;
 

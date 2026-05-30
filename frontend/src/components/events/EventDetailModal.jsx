@@ -85,7 +85,7 @@ export default function EventDetailModal({ event, onClose, onUpdate }) {
           ? Promise.resolve(null)
           : hasTenant
             ? vendorsAPI.list({ size: 100 })
-            : api.get('/marketplace', { params: { size: 100 } });
+            : api.get('/marketplace/vendors', { params: { size: 100 } });
 
         const fetches = [
           eventsAPI.get(eventId),

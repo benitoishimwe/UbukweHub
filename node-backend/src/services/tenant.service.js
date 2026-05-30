@@ -294,25 +294,37 @@ async function createTenantAdmin({ tenantId, email, password, name }) {
  * Return high-level platform statistics for the super_admin dashboard.
  */
 async function getPlatformStats() {
-  // Find tenant IDs on trial plan so we can count trial users
-  const trialTenants = await prisma.tenant.findMany({
-    where: { subscriptionTier: 'trial', isActive: true },
-    select: { tenantId: true },
-  });
-  const trialTenantIds = trialTenants.map(t => t.tenantId);
+  const TRIAL_DAYS = 14;
+  const trialCutoff = new Date();
+  trialCutoff.setDate(trialCutoff.getDate() - TRIAL_DAYS);
 
-  const [totalTenants, activeTenants, totalUsers, activeUsers, standaloneUsers, trialUsers] = await Promise.all([
+  const [totalTenants, activeTenants, totalUsers, activeUsers, trialUsers, standaloneUsers] = await Promise.all([
     prisma.tenant.count(),
     prisma.tenant.count({ where: { isActive: true } }),
     prisma.user.count(),
     prisma.user.count({ where: { isActive: true } }),
-    prisma.user.count({ where: { tenantId: null } }),
-    trialTenantIds.length > 0
-      ? prisma.user.count({ where: { tenantId: { in: trialTenantIds } } })
-      : Promise.resolve(0),
+    // Trial = active trial subscription OR tenant on trial tier OR standalone within 14-day signup window
+    prisma.user.count({
+      where: {
+        OR: [
+          { subscriptions: { some: { status: 'trial' } } },
+          { tenant: { subscriptionTier: 'trial' } },
+          { tenantId: null, createdAt: { gte: trialCutoff } },
+        ],
+      },
+    }),
+    // Standalone = no tenant, past 14-day window, no active trial subscription
+    prisma.user.count({
+      where: {
+        tenantId: null,
+        createdAt: { lt: trialCutoff },
+        subscriptions: { none: { status: 'trial' } },
+      },
+    }),
   ]);
 
-  const tenantUsers = totalUsers - standaloneUsers;
+  // Tenant members = all users minus trial users minus plain standalone users
+  const tenantUsers = totalUsers - trialUsers - standaloneUsers;
 
   return { totalTenants, activeTenants, totalUsers, activeUsers, standaloneUsers, tenantUsers, trialUsers };
 }

@@ -29,48 +29,50 @@ const NAV_REGISTRY = [
     roles: ['tenant_admin', 'event_manager', 'client'] },
 
   { key: 'planner',        path: '/planner',        label: 'Planner',             icon: Heart,
-    roles: ['tenant_admin', 'event_manager', 'client'],
-    featureKey: 'planner', featureExemptRoles: ['event_manager'] },
+    roles: ['tenant_admin', 'event_manager', 'client'] },
 
   { key: 'inventory',      path: '/inventory',      labelKey: 'nav.inventory',    icon: Package,
     roles: ['tenant_admin', 'event_manager', 'staff'] },
 
   { key: 'transactions',   path: '/transactions',   labelKey: 'nav.transactions', icon: ArrowLeftRight,
-    roles: ['tenant_admin', 'staff'] },
+    roles: ['tenant_admin', 'event_manager', 'staff'],
+    featureKey: 'admin_pages', featureExemptRoles: ['tenant_admin', 'staff'] },
 
   { key: 'staff',          path: '/staff',          labelKey: 'nav.staff',        icon: Users,
     roles: ['tenant_admin', 'event_manager'] },
 
   { key: 'vendors',        path: '/vendors',        labelKey: 'nav.vendors',      icon: Store,
-    roles: ['tenant_admin'] },
+    roles: ['tenant_admin', 'event_manager'],
+    featureKey: 'admin_pages', featureExemptRoles: ['tenant_admin'] },
 
   { key: 'marketplace',    path: '/marketplace',    label: 'Marketplace',         icon: MapPin,
     roles: ['event_manager', 'client', 'vendor'] },
 
   // ── Feature-gated items ───────────────────────────────────────────────────
   { key: 'ai',             path: '/ai',             labelKey: 'nav.ai',           icon: Sparkles,
-    roles: ['tenant_admin', 'event_manager', 'client'], featureKey: 'ai_assistant',
-    featureExemptRoles: ['event_manager'] },
+    roles: ['tenant_admin', 'event_manager', 'client'], featureKey: 'ai_assistant' },
 
   { key: 'savethedate',    path: '/save-the-date',  label: 'Save the Date',       icon: Image,
-    roles: ['tenant_admin', 'event_manager'],           featureKey: 'save_the_date',
-    featureExemptRoles: ['event_manager'] },
+    roles: ['tenant_admin', 'event_manager'],           featureKey: 'save_the_date' },
 
   { key: 'reports',        path: '/reports',        labelKey: 'nav.reports',      icon: BarChart3,
-    roles: ['tenant_admin'],                            featureKey: 'advanced_reports' },
+    roles: ['tenant_admin', 'event_manager'],           featureKey: 'advanced_reports' },
 
-  // ── Tenant-admin only ─────────────────────────────────────────────────────
+  // ── Tenant-admin only (also shown to event_manager on trial via admin_pages) ─
   { key: 'pricing',        path: '/pricing',        label: 'Pricing',             icon: CreditCard,
-    roles: ['tenant_admin'] },
+    roles: ['tenant_admin', 'event_manager'],
+    featureKey: 'admin_pages', featureExemptRoles: ['tenant_admin'] },
 
   { key: 'admin',          path: '/admin',          labelKey: 'nav.admin',        icon: ShieldCheck,
-    roles: ['tenant_admin'] },
+    roles: ['tenant_admin', 'event_manager'],
+    featureKey: 'admin_pages', featureExemptRoles: ['tenant_admin'] },
 
   { key: 'messages',       path: '/messages',       label: 'Messages',            icon: MessageSquare,
     roles: ['tenant_admin', 'event_manager', 'staff'] },
 
   { key: 'billing',        path: '/billing',        label: 'Billing',             icon: Receipt,
-    roles: ['tenant_admin'] },
+    roles: ['tenant_admin', 'event_manager'],
+    featureKey: 'admin_pages', featureExemptRoles: ['tenant_admin'] },
 
   // ── Vendor-only ───────────────────────────────────────────────────────────
   { key: 'vendor_profile', path: '/vendor-profile', label: 'My Profile',          icon: Briefcase,

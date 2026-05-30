@@ -6,11 +6,11 @@ const SubscriptionContext = createContext(null);
 
 // Plans and the features they unlock — mirrors backend featureGate.js
 const PLAN_FEATURES = {
-  max:        ['ai_assistant', 'planner', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports', 'white_label', 'api_access', 'save_the_date_image'],
-  enterprise: ['ai_assistant', 'planner', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports', 'white_label', 'api_access', 'save_the_date_image'],
-  pro:        ['ai_assistant', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports'],
-  wedding:    ['ai_assistant', 'planner', 'save_the_date', 'vendor_marketplace', 'advanced_reports', 'save_the_date_image'],
-  trial:      ['ai_assistant', 'planner', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports', 'save_the_date_image'],
+  max:        ['ai_assistant', 'planner', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports', 'white_label', 'api_access', 'save_the_date_image', 'admin_pages'],
+  enterprise: ['ai_assistant', 'planner', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports', 'white_label', 'api_access', 'save_the_date_image', 'admin_pages'],
+  pro:        ['ai_assistant', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports', 'admin_pages'],
+  wedding:    ['ai_assistant', 'planner', 'save_the_date', 'vendor_marketplace', 'advanced_reports', 'save_the_date_image', 'admin_pages'],
+  trial:      ['ai_assistant', 'planner', 'save_the_date', 'vendor_marketplace', 'analytics', 'unlimited_events', 'advanced_reports', 'save_the_date_image', 'admin_pages'],
   free:       [],
 };
 
@@ -68,10 +68,10 @@ export function SubscriptionProvider({ children }) {
   const trialDaysLeft = dbTrialDaysLeft ?? (isClientOnDefaultTrial ? defaultTrialDaysLeft : null);
 
   const isFeatureEnabled = (featureKey) => {
-    // 0. Event managers always get core planning features regardless of plan.
-    //    Mirrors the featureExemptRoles in Layout.jsx so page-level gates also pass.
-    const EVENT_MANAGER_ALWAYS = ['ai_assistant', 'planner', 'save_the_date'];
-    if (user?.role === 'event_manager' && EVENT_MANAGER_ALWAYS.includes(featureKey)) return true;
+    // 0. Event managers always get the planner feature regardless of plan,
+    //    because Planner is a core item for their role. AI and Save the Date
+    //    are intentionally NOT exempt — they require an active trial/paid plan.
+    if (user?.role === 'event_manager' && featureKey === 'planner') return true;
 
     // 1. Use the raw subscription row's plan — always correct even when the
     //    server-side computed `plan` is overridden by the tenant-tier bug.

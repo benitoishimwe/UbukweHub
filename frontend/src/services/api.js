@@ -283,6 +283,34 @@ export const messagesAPI = {
   markClientsRead:   ()           => api.patch('/messages/clients/read'),
 };
 
+// Event chat channels
+export const eventMessagesAPI = {
+  // Channels
+  listChannels: () => api.get('/channels'),
+
+  // Messages
+  list:   (eventId, params) => api.get(`/events/${eventId}/messages`, { params }),
+  send:   (eventId, data)   => api.post(`/events/${eventId}/messages`, data),
+  search: (eventId, q)      => api.get(`/events/${eventId}/messages/search`, { params: { q } }),
+  markRead: (eventId)       => api.patch(`/events/${eventId}/read`),
+
+  // File upload
+  uploadFile: (eventId, formData) =>
+    api.post(`/events/${eventId}/messages/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  // Pin / unpin
+  pin:   (eventId, messageId, isPinned) => api.patch(`/events/${eventId}/messages/${messageId}/pin`, { isPinned }),
+
+  // Convert to task
+  createTask: (eventId, messageId, data) => api.post(`/events/${eventId}/messages/${messageId}/task`, data),
+
+  // Typing
+  setTyping: (eventId) => api.post(`/events/${eventId}/typing`),
+  getTyping: (eventId) => api.get(`/events/${eventId}/typing`),
+};
+
 // Subscriptions
 export const subscriptionsAPI = {
   plans:            ()         => api.get('/subscriptions/plans'),

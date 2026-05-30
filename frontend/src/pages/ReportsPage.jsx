@@ -30,12 +30,12 @@ export default function ReportsPage() {
         setTxStats(txData);
         setInvStats(invData);
         setEvStats(evData);
-        // Admin-only extended stats
-        if (user?.role === 'tenant_admin' || user?.role === 'super_admin') {
+        // Admin stats are available to tenant_admin, super_admin, and event_manager on trial
+        const canFetchAdminStats = ['tenant_admin', 'super_admin', 'event_manager'].includes(user?.role);
+        if (canFetchAdminStats) {
           const aRes = await adminAPI.stats().catch(() => ({ data: {} }));
           setStats(aRes.data || {});
         } else {
-          // Build stats from accessible endpoints for non-admin
           setStats({
             total_events: evData.total || 0,
             total_inventory: invData.total || 0,

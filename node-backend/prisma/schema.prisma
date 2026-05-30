@@ -89,6 +89,8 @@ model User {
   supportTickets       SupportTicket[]      @relation("TicketUser")
   assignedTickets      SupportTicket[]      @relation("TicketAssignee")
   chatbotConversations ChatbotConversation[]
+  channelMessages      ChannelMessage[]     @relation("ChannelMessageSender")
+  channelReadStatuses  ChannelReadStatus[]
 
   @@map("users")
 }
@@ -132,6 +134,7 @@ model Event {
   messages             Message[]
   guestCheckinAttempts GuestCheckinAttempt[]
   guestCheckins        GuestCheckin[]
+  channelMessages      ChannelMessage[]
 
   @@map("events")
 }
@@ -847,4 +850,38 @@ model ChatbotMessage {
   conversation ChatbotConversation @relation(fields: [conversationId], references: [conversationId], onDelete: Cascade)
 
   @@map("chatbot_messages")
+}
+
+// ─── Event Chat ───────────────────────────────────────────────────────────────
+
+model ChannelMessage {
+  messageId       String    @id @default(uuid()) @map("message_id") @db.Uuid
+  eventId         String    @map("event_id") @db.Uuid
+  senderId        String    @map("sender_id") @db.Uuid
+  senderName      String    @map("sender_name")
+  senderRole      String    @map("sender_role")
+  content         String?
+  attachments     Json?
+  parentMessageId String?   @map("parent_message_id") @db.Uuid
+  isPinned        Boolean   @default(false) @map("is_pinned")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  event   Event            @relation(fields: [eventId], references: [eventId], onDelete: Cascade)
+  sender  User             @relation("ChannelMessageSender", fields: [senderId], references: [userId])
+  parent  ChannelMessage?  @relation("MessageReplies", fields: [parentMessageId], references: [messageId], onDelete: NoAction, onUpdate: NoAction)
+  replies ChannelMessage[] @relation("MessageReplies")
+
+  @@map("channel_messages")
+}
+
+model ChannelReadStatus {
+  userId     String   @map("user_id") @db.Uuid
+  channelId  String   @map("channel_id") @db.Uuid
+  lastReadAt DateTime @default(now()) @map("last_read_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([userId, channelId])
+  @@map("channel_read_status")
 }

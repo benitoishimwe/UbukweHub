@@ -1,11 +1,24 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, CheckCheck, ClipboardList, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck, ClipboardList, MessageSquare, X } from 'lucide-react';
 import { notificationsAPI } from '../services/api';
 
 const ICON_BY_TYPE = {
-  task_assigned: ClipboardList,
+  task_assigned:  ClipboardList,
+  message_seen:   MessageSquare,
+  chat_mention:   MessageSquare,
 };
+
+function resolveNavTarget(n) {
+  if (n.type === 'message_seen' && n.resourceType === 'user' && n.resourceId) {
+    return { path: '/messages', state: { tab: 'team', partnerId: n.resourceId } };
+  }
+  if (n.type === 'chat_mention' && n.resourceType === 'channel_message') {
+    return { path: '/messages', state: { tab: 'channels' } };
+  }
+  return null;
+}
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -22,6 +35,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount]     = useState(0);
   const [open, setOpen]                   = useState(false);
   const [pos, setPos]                     = useState({});
+  const navigate = useNavigate();
 
   const bellRef     = useRef(null);
   const dropdownRef = useRef(null);
@@ -133,6 +147,22 @@ export default function NotificationBell() {
     } catch {}
   };
 
+  const handleNotificationClick = async (n) => {
+    const target = resolveNavTarget(n);
+    if (!target) return;
+    setOpen(false);
+    if (!n.isRead) {
+      try {
+        await notificationsAPI.markRead(n.notificationId);
+        setNotifications(prev =>
+          prev.map(x => x.notificationId === n.notificationId ? { ...x, isRead: true } : x)
+        );
+        setUnreadCount(c => Math.max(0, c - 1));
+      } catch {}
+    }
+    navigate(target.path, { state: target.state });
+  };
+
   return (
     <div ref={bellRef}>
       {/* Bell button */}
@@ -200,12 +230,14 @@ export default function NotificationBell() {
             ) : (
               notifications.map(n => {
                 const Icon = ICON_BY_TYPE[n.type] || Bell;
+                const hasNav = !!resolveNavTarget(n);
                 return (
                   <div
                     key={n.notificationId}
+                    onClick={hasNav ? () => handleNotificationClick(n) : undefined}
                     className={`flex items-start gap-3 px-4 py-3 hover:bg-[#F9FAFB] transition-colors ${
                       !n.isRead ? 'bg-[#EFF6FF]' : ''
-                    }`}
+                    } ${hasNav ? 'cursor-pointer' : ''}`}
                   >
                     <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 ${
                       !n.isRead ? 'bg-[#DBEAFE]' : 'bg-[#F3F4F6]'

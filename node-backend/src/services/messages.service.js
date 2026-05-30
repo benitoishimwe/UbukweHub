@@ -121,10 +121,51 @@ async function sendDM({ tenantId, senderId, senderName, senderRole, recipientId,
 // ─── Mark DM thread as read ───────────────────────────────────────────────────
 
 async function markConversationRead({ tenantId, userId, partnerId }) {
+  // Find unread messages from partner before marking them read
+  const unread = await prisma.message.findMany({
+    where: { tenantId, senderId: partnerId, recipientId: userId, isRead: false },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+  });
+
   await prisma.message.updateMany({
     where: { tenantId, senderId: partnerId, recipientId: userId, isRead: false },
     data: { isRead: true },
   });
+
+  // Notify the sender that their message was seen — only if messages were newly marked
+  if (unread.length > 0) {
+    const reader = await prisma.user.findUnique({
+      where: { userId },
+      select: { name: true },
+    });
+
+    // Avoid duplicate seen notifications: skip if one already exists in last 60s
+    const recentlySent = await prisma.notification.findFirst({
+      where: {
+        userId: partnerId,
+        tenantId,
+        type: 'message_seen',
+        resourceId: userId,
+        createdAt: { gte: new Date(Date.now() - 60_000) },
+      },
+    });
+
+    if (!recentlySent) {
+      await prisma.notification.create({
+        data: {
+          userId: partnerId,
+          tenantId,
+          type: 'message_seen',
+          title: `${reader?.name || 'Someone'} read your message`,
+          body: unread[0].content.slice(0, 100),
+          resourceId: userId,
+          resourceType: 'user',
+        },
+      });
+    }
+  }
+
   return { success: true };
 }
 
