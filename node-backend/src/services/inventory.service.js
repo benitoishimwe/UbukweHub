@@ -7,8 +7,12 @@ const { generateQrCode } = require('../utils/qrcode');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// null  → scope to items with no tenant (self-serve)
+// uuid  → scope to that tenant's items
+// undefined → no filter (super-admin sees all)
 function tenantScope(tenantId) {
-  return tenantId ? { tenantId } : {};
+  if (tenantId === undefined) return {};
+  return tenantId ? { tenantId } : { tenantId: null };
 }
 
 function generatePlaniCode() {
@@ -118,8 +122,38 @@ async function getItemByBarcode(barcode, tenantId) {
  * @param {object} params
  */
 async function createItem({ tenantId, name, category, barcode, quantity, condition, purchasePrice, rentalPrice, photos }) {
+  const { Prisma } = require('@prisma/client');
   const qrCode = generatePlaniCode();
   const qty = quantity !== undefined ? Number(quantity) : 0;
+
+  // Use raw SQL when tenantId is null (self-serve event managers) to bypass
+  // Prisma's non-nullable tenantId relation requirement on InventoryItem.
+  if (!tenantId) {
+    const rows = await prisma.$queryRaw(Prisma.sql`
+      INSERT INTO inventory_items (
+        item_id, tenant_id, name, category, qr_code, barcode,
+        quantity, available, rented, washing, condition,
+        purchase_price, rental_price, photos, is_active
+      ) VALUES (
+        gen_random_uuid(),
+        NULL,
+        ${name},
+        ${category || null},
+        ${qrCode},
+        ${barcode || null},
+        ${qty}::integer,
+        ${qty}::integer,
+        0, 0,
+        ${condition || 'good'},
+        ${purchasePrice != null ? Number(purchasePrice) : null},
+        ${rentalPrice != null ? Number(rentalPrice) : null},
+        ${photos ? JSON.stringify(photos) : null}::jsonb,
+        true
+      )
+      RETURNING *
+    `);
+    return rows[0];
+  }
 
   return prisma.inventoryItem.create({
     data: {

@@ -9,8 +9,9 @@ const prisma = require('./prisma');
  * created once; subsequent boots are no-ops.
  */
 const MIGRATIONS = [
-  // ── Allow null tenant_id on event_tasks (self-serve event managers) ────────
+  // ── Allow null tenant_id on event_tasks and inventory_items ───────────────
   `ALTER TABLE event_tasks ALTER COLUMN tenant_id DROP NOT NULL`,
+  `ALTER TABLE inventory_items ALTER COLUMN tenant_id DROP NOT NULL`,
 
   // ── Core event columns added after initial schema ─────────────────────────
   `ALTER TABLE events

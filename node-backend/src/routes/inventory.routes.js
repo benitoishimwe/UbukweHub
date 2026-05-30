@@ -11,11 +11,11 @@ const router = Router();
 // ─── GET / — list items ───────────────────────────────────────────────────────
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : req.user.tenantId;
-    if (!tenantId && req.user.role !== Roles.SUPER_ADMIN) {
-      return R.badRequest(res, 'Tenant context required');
-    }
+    const isSuperAdmin = req.user.role === Roles.SUPER_ADMIN;
+    const tenantId = isSuperAdmin ? null : (req.user.tenantId || null);
 
+    // Self-serve users with no tenant only see items with null tenant_id
+    // (their own items). Super-admin sees all.
     const { category, condition, search, page, size } = req.query;
 
     const result = await inventoryService.listItems({
@@ -37,11 +37,10 @@ router.get('/', authenticate, async (req, res, next) => {
 router.post(
   '/',
   authenticate,
-  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN),
+  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN, Roles.EVENT_MANAGER),
   async (req, res, next) => {
     try {
-      const tenantId = req.user.tenantId;
-      if (!tenantId) return R.badRequest(res, 'Tenant context required');
+      const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : (req.user.tenantId || null);
 
       const { name, category, barcode, quantity, condition, purchasePrice, rentalPrice, photos } = req.body;
       if (!name) return R.badRequest(res, 'Item name is required');
@@ -68,7 +67,7 @@ router.post(
 // ─── GET /stats — inventory stats ────────────────────────────────────────────
 router.get('/stats', authenticate, async (req, res, next) => {
   try {
-    const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : req.user.tenantId;
+    const tenantId = req.user.role === Roles.SUPER_ADMIN ? undefined : (req.user.tenantId || null);
     const stats = await inventoryService.getInventoryStats(tenantId);
     return R.ok(res, stats);
   } catch (err) {
@@ -79,7 +78,7 @@ router.get('/stats', authenticate, async (req, res, next) => {
 // ─── GET /categories — list categories ───────────────────────────────────────
 router.get('/categories', authenticate, async (req, res, next) => {
   try {
-    const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : req.user.tenantId;
+    const tenantId = req.user.role === Roles.SUPER_ADMIN ? undefined : (req.user.tenantId || null);
     const categories = await inventoryService.getCategories(tenantId);
     return R.ok(res, categories);
   } catch (err) {
@@ -136,7 +135,7 @@ router.get('/:itemId', authenticate, async (req, res, next) => {
 router.put(
   '/:itemId',
   authenticate,
-  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN),
+  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN, Roles.EVENT_MANAGER),
   async (req, res, next) => {
     try {
       const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : req.user.tenantId;
@@ -152,7 +151,7 @@ router.put(
 router.patch(
   '/:itemId',
   authenticate,
-  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN),
+  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN, Roles.EVENT_MANAGER),
   async (req, res, next) => {
     try {
       const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : req.user.tenantId;
@@ -168,7 +167,7 @@ router.patch(
 router.delete(
   '/:itemId',
   authenticate,
-  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN),
+  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN, Roles.EVENT_MANAGER),
   async (req, res, next) => {
     try {
       const tenantId = req.user.role === Roles.SUPER_ADMIN ? null : req.user.tenantId;
