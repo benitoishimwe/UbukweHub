@@ -1,6 +1,7 @@
 'use strict';
 
 const bcrypt = require('bcryptjs');
+const { randomUUID } = require('crypto');
 const prisma = require('../config/prisma');
 const { createToken } = require('../utils/jwt');
 const { generateSecret, generateQrUri, verify: verifyTotp, generateEmailOtp } = require('../utils/totp');
@@ -8,6 +9,7 @@ const { AppError } = require('../middleware/errorHandler');
 const emailService = require('./email.service');
 const auditService = require('./audit.service');
 const subscriptionService = require('./subscription.service');
+const config = require('../config/env');
 
 const BCRYPT_ROUNDS = 10;
 const EMAIL_OTP_TTL_MINUTES = 10;
@@ -61,7 +63,14 @@ async function register({ email, password, name, role = 'client', tenantId = nul
     },
   });
 
-  await subscriptionService.createAutoTrial(user.userId, user.tenantId || null);
+  try {
+    await subscriptionService.createAutoTrial(user.userId, user.tenantId || null);
+  } catch (trialErr) {
+    // Trial creation may fail if DB constraints haven't been migrated yet.
+    // Fall back silently to free plan — user can always upgrade later.
+    console.warn('[register] createAutoTrial failed, falling back to free:', trialErr.message);
+    await subscriptionService.createFreeSubscription(user.userId, user.tenantId || null).catch(() => {});
+  }
 
   const token = createToken(user.userId, user.role, user.email, user.tenantId);
 
@@ -461,6 +470,70 @@ async function getInvitation(token) {
   return invitation;
 }
 
+/**
+ * Initiate a self-service password reset. Always returns without error to
+ * prevent email enumeration — the reset email is sent only when the account exists.
+ *
+ * @param {string} email
+ */
+async function forgotPassword(email) {
+  const normalised = email.toLowerCase().trim();
+  const user = await prisma.user.findUnique({
+    where: { email: normalised },
+    select: { userId: true, name: true, email: true, isActive: true },
+  });
+
+  if (!user || !user.isActive) return; // silent — don't reveal whether email exists
+
+  const token = randomUUID();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  // Invalidate any existing tokens for this user
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM password_reset_tokens WHERE user_id = $1`,
+    user.userId
+  );
+
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO password_reset_tokens (user_id, token, expires_at)
+     VALUES ($1, $2, $3::timestamptz)`,
+    user.userId, token, expiresAt.toISOString()
+  );
+
+  const resetLink = `${config.frontendUrl}/reset-password?token=${token}`;
+  await emailService.sendPasswordResetRequest(user.email, user.name, resetLink).catch((err) => {
+    console.error('[auth.service] Failed to send password reset email:', err.message);
+  });
+}
+
+/**
+ * Complete a password reset using the token sent by email.
+ *
+ * @param {string} token       - UUID token from the reset link
+ * @param {string} newPassword - New plaintext password (min 8 chars)
+ */
+async function resetPassword(token, newPassword) {
+  const rows = await prisma.$queryRawUnsafe(
+    `SELECT token_id, user_id::text, expires_at, used_at
+     FROM password_reset_tokens WHERE token = $1`,
+    token
+  );
+
+  if (!rows.length) throw new AppError('Invalid or expired reset link', 400, 'INVALID_RESET_TOKEN');
+
+  const row = rows[0];
+  if (row.used_at)                        throw new AppError('This reset link has already been used', 400, 'TOKEN_USED');
+  if (new Date(row.expires_at) < new Date()) throw new AppError('This reset link has expired. Please request a new one.', 400, 'TOKEN_EXPIRED');
+
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+  await prisma.user.update({ where: { userId: row.user_id }, data: { passwordHash } });
+  await prisma.$executeRawUnsafe(
+    `UPDATE password_reset_tokens SET used_at = now() WHERE token_id = $1`,
+    row.token_id
+  );
+}
+
 module.exports = {
   register,
   login,
@@ -472,4 +545,6 @@ module.exports = {
   loginWithSession,
   acceptInvitation,
   getInvitation,
+  forgotPassword,
+  resetPassword,
 };

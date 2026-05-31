@@ -15,6 +15,30 @@ const VENDOR_CATEGORIES = [
   'Event Planning', 'Lighting', 'Invitation & Stationery', 'Other',
 ];
 
+const COUNTRIES = [
+  'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria',
+  'Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan',
+  'Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi',
+  'Cabo Verde','Cambodia','Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia',
+  'Comoros','Congo (Brazzaville)','Congo (Kinshasa)','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic',
+  'Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt','El Salvador','Equatorial Guinea',
+  'Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany',
+  'Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary',
+  'Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan',
+  'Kazakhstan','Kenya','Kiribati','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia',
+  'Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta',
+  'Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro',
+  'Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger',
+  'Nigeria','North Korea','North Macedonia','Norway','Oman','Pakistan','Palau','Panama','Papua New Guinea',
+  'Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis',
+  'Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','São Tomé and Príncipe','Saudi Arabia',
+  'Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia',
+  'South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland',
+  'Syria','Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago',
+  'Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom',
+  'United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe',
+];
+
 const inputCls =
   'w-full px-3 py-2.5 rounded-xl border border-[#EBE5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C40] focus:border-[#C9A84C] bg-white text-[#2D2D2D] placeholder-[#9CA3AF]';
 
@@ -40,7 +64,7 @@ function Field({ label, icon: Icon, children }) {
 }
 
 function VendorSetupForm({ user, onCreated, onBack }) {
-  const [form, setForm] = useState({ name: user?.name || '', category: '', phone: '', location: '' });
+  const [form, setForm] = useState({ name: user?.name || '', category: '', phone: '', location: '', country: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -66,7 +90,7 @@ function VendorSetupForm({ user, onCreated, onBack }) {
       <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-[#5C5C5C] hover:text-[#0F4C5C] mb-6 transition-colors">
         <ArrowLeft size={16} /> Back to Dashboard
       </button>
-      <div className="bg-white rounded-2xl p-8 shadow-[0_4px_20px_rgb(0,0,0,0.06)]">
+      <div className="card-wedding p-8 animate-slide-up">
         <div className="text-center mb-6">
           <div className="w-16 h-16 rounded-2xl bg-[#E8F4F8] flex items-center justify-center mx-auto mb-3">
             <User size={28} className="text-[#0F4C5C]" />
@@ -79,32 +103,39 @@ function VendorSetupForm({ user, onCreated, onBack }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#5C5C5C] mb-1">Business Name</label>
-            <input className={inputCls} placeholder={user?.name || 'Your business name'} value={form.name}
+            <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Business Name</label>
+            <input className="input-wedding" placeholder={user?.name || 'Your business name'} value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })} required />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#5C5C5C] mb-1">Category <span className="text-[#D9534F]">*</span></label>
-            <select className={inputCls} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} required>
+            <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Category <span className="text-[#D9534F]">*</span></label>
+            <select className="input-wedding" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} required>
               <option value="">Select your service type…</option>
               {VENDOR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Country <span className="text-[#9CA3AF] font-normal">(optional)</span></label>
+            <select className="input-wedding" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })}>
+              <option value="">Select your country…</option>
+              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#5C5C5C] mb-1">Phone <span className="text-[#9CA3AF] font-normal">(optional)</span></label>
-              <input className={inputCls} placeholder="+250 7XX XXX XXX" value={form.phone}
+              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Phone <span className="text-[#9CA3AF] font-normal">(optional)</span></label>
+              <input className="input-wedding" placeholder="+1 555 000 0000" value={form.phone}
                 onChange={e => setForm({ ...form, phone: e.target.value })} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#5C5C5C] mb-1">Location <span className="text-[#9CA3AF] font-normal">(optional)</span></label>
-              <input className={inputCls} placeholder="Kigali, Rwanda" value={form.location}
+              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">City <span className="text-[#9CA3AF] font-normal">(optional)</span></label>
+              <input className="input-wedding" placeholder="e.g. Paris, Lagos, Dubai…" value={form.location}
                 onChange={e => setForm({ ...form, location: e.target.value })} />
             </div>
           </div>
           {error && <p className="text-sm text-[#D9534F]">{error}</p>}
           <button type="submit" disabled={loading}
-            className="w-full h-12 rounded-xl bg-[#C9A84C] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#B8962A] transition-colors disabled:opacity-60">
+            className="w-full btn-gold h-12 flex items-center justify-center gap-2 text-sm font-semibold">
             {loading ? <Loader2 size={18} className="animate-spin" /> : 'Start selling on Plani →'}
           </button>
         </form>
@@ -208,6 +239,23 @@ export default function VendorProfilePage() {
   };
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+
+  const [togglingMarketplace, setTogglingMarketplace] = useState(false);
+  const handleMarketplaceToggle = async () => {
+    if (togglingMarketplace) return;
+    const next = !(vendor.profile?.isMarketplaceActive ?? false);
+    setTogglingMarketplace(true);
+    try {
+      const res = await vendorMeAPI.updateMe({ isMarketplaceActive: next });
+      setVendor(res.data);
+      setForm((f) => ({ ...f, isMarketplaceActive: next }));
+      toast.success(next ? 'Your business is now listed on the marketplace' : 'Removed from marketplace');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update marketplace visibility');
+    } finally {
+      setTogglingMarketplace(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -421,7 +469,7 @@ export default function VendorProfilePage() {
           </div>
         </div>
 
-        {/* Marketplace visibility */}
+        {/* Marketplace visibility — instant toggle (no edit mode needed) */}
         <div className="bg-white rounded-2xl p-6 shadow-[0_4px_20px_rgb(0,0,0,0.04)]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -430,19 +478,28 @@ export default function VendorProfilePage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-[#2D2D2D]">Marketplace Listing</p>
-                <p className="text-xs text-[#5C5C5C]">Show your business to clients browsing the marketplace</p>
+                <p className="text-xs text-[#5C5C5C]">
+                  {vendor.profile?.isMarketplaceActive
+                    ? 'Your business is visible to clients browsing the marketplace'
+                    : 'Show your business to clients browsing the marketplace'}
+                </p>
               </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={editing ? form.isMarketplaceActive : (vendor.profile?.isMarketplaceActive ?? false)}
-                onChange={editing ? set('isMarketplaceActive') : undefined}
-                disabled={!editing}
+            <button
+              type="button"
+              onClick={handleMarketplaceToggle}
+              disabled={togglingMarketplace}
+              className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-60 ${
+                vendor.profile?.isMarketplaceActive ? 'bg-[#0F4C5C]' : 'bg-[#D1D5DB]'
+              }`}
+              aria-label="Toggle marketplace listing"
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                  vendor.profile?.isMarketplaceActive ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
               />
-              <div className="w-11 h-6 bg-[#D1D5DB] peer-focus:outline-none rounded-full peer peer-checked:bg-[#0F4C5C] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
-            </label>
+            </button>
           </div>
         </div>
 

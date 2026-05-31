@@ -46,9 +46,9 @@ export default function SuperAdminDashboard({ children }) {
   const isRoot = location.pathname === '/super-admin';
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] flex flex-col md:flex-row">
+    <div className="h-screen overflow-hidden bg-[#F5F0E8] flex flex-col md:flex-row">
       {/* Mobile top bar */}
-      <div className="md:hidden bg-[#1A1A2E] flex items-center justify-between px-4 py-3 gap-2">
+      <div className="md:hidden bg-[#1A1A2E] flex items-center justify-between px-4 py-3 gap-2 flex-shrink-0">
         <div className="flex items-center gap-2 flex-shrink-0">
           <ShieldAlert size={18} className="text-[#C9A84C]" />
           <span className="text-white font-bold text-sm">Super Admin</span>
@@ -79,8 +79,8 @@ export default function SuperAdminDashboard({ children }) {
         </button>
       </div>
 
-      {/* Sidebar (desktop only) */}
-      <aside className="hidden md:flex w-60 bg-[#1A1A2E] flex-col py-6 px-4 flex-shrink-0">
+      {/* Sidebar (desktop only) — fixed height, independently scrollable */}
+      <aside className="hidden md:flex w-60 bg-[#1A1A2E] flex-col py-6 px-4 flex-shrink-0 h-full overflow-y-auto">
         <div className="flex items-center gap-2 px-2 mb-8">
           <ShieldAlert size={22} className="text-[#C9A84C]" />
           <span className="text-white font-bold text-sm">Super Admin</span>
@@ -117,8 +117,8 @@ export default function SuperAdminDashboard({ children }) {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 min-w-0 p-4 md:p-8 overflow-y-auto">
+      {/* Main content — independently scrollable */}
+      <main className="flex-1 min-w-0 h-full p-4 md:p-8 overflow-y-auto">
         {children ?? (
           <>
             <h1 className="text-2xl font-bold text-[#2D2D2D] mb-6">Platform Overview</h1>

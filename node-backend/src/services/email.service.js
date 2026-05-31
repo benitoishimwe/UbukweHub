@@ -476,6 +476,106 @@ async function sendTicketCreatedInternal(to, { ticketId, email, subject, message
 }
 
 /**
+ * Send a self-service password reset email with a one-time link.
+ *
+ * @param {string} to        - Recipient email address
+ * @param {string} name      - Recipient display name
+ * @param {string} resetLink - Full URL containing the reset token
+ * @returns {Promise<void>}
+ */
+async function sendPasswordResetRequest(to, name, resetLink) {
+  if (!isResendConfigured) {
+    warnUnconfigured(to);
+    console.info(`[email.service] Password reset link for ${to}: ${resetLink}`);
+    return;
+  }
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: 'Reset your Plani password',
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:0 24px 32px;background:#ffffff;border-radius:8px;">
+        ${emailLogoHeader()}
+        <h2 style="color:#0F4C5C;margin-bottom:8px;">Reset Your Password</h2>
+        <p style="color:#555;margin-bottom:16px;">Hi ${name || 'there'},</p>
+        <p style="color:#555;margin-bottom:24px;">
+          We received a request to reset the password for your Plani account. Click the button below to choose a new password. This link expires in <strong>1 hour</strong>.
+        </p>
+        <a href="${resetLink}"
+           style="display:inline-block;padding:13px 30px;background:#0F4C5C;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">
+          Reset Password
+        </a>
+        <p style="color:#888;font-size:13px;margin-top:28px;">
+          Or copy and paste this link:<br>
+          <a href="${resetLink}" style="color:#0F4C5C;word-break:break-all;">${resetLink}</a>
+        </p>
+        <p style="color:#aaa;font-size:12px;margin-top:24px;">
+          If you did not request a password reset, you can safely ignore this email — your password will not change.
+        </p>
+        ${EMAIL_FOOTER}
+      </div>
+    `,
+    text: `Hi ${name || 'there'},\n\nReset your Plani password here:\n${resetLink}\n\nThis link expires in 1 hour. If you did not request this, ignore this email.`,
+  });
+}
+
+/**
+ * Send a vendor invitation email with a link to complete their vendor profile.
+ *
+ * @param {string} to             - Recipient email address
+ * @param {string} inviterName    - Name of the admin sending the invite
+ * @param {string} tenantName     - Name of the organisation
+ * @param {string} invitationLink - Full URL to the vendor registration page
+ * @param {string} [message]      - Optional personal message from the inviter
+ * @returns {Promise<void>}
+ */
+async function sendVendorInvitation(to, inviterName, tenantName, invitationLink, message) {
+  if (!isResendConfigured) {
+    warnUnconfigured(to);
+    console.info(`[email.service] Vendor invitation link for ${to}: ${invitationLink}`);
+    return;
+  }
+
+  const personalNote = message
+    ? `<div style="background:#F9FAFB;border-left:3px solid #C9A84C;padding:12px 16px;margin:16px 0;color:#374151;font-size:14px;font-style:italic;">${message.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`
+    : '';
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `You're invited to join Plani as a vendor`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:0 24px 32px;background:#ffffff;border-radius:8px;">
+        ${emailLogoHeader()}
+        <h2 style="color:#0F4C5C;margin-bottom:8px;">Vendor Invitation</h2>
+        <p style="color:#555;margin-bottom:16px;">
+          <strong>${inviterName}</strong> from <strong>${tenantName}</strong> has invited you to join <strong>Plani</strong> as a vendor and list your services on our marketplace.
+        </p>
+        ${personalNote}
+        <p style="color:#555;margin-bottom:8px;">As a Plani vendor you can:</p>
+        <ul style="color:#555;margin:0 0 24px;padding-left:20px;line-height:2;">
+          <li>Create a professional profile and showcase your portfolio</li>
+          <li>Appear in the Plani vendor marketplace</li>
+          <li>Receive event inquiries directly from event planners</li>
+        </ul>
+        <p style="color:#555;margin-bottom:24px;">Click the button below to set up your vendor profile. The link expires in <strong>7 days</strong>.</p>
+        <a href="${invitationLink}"
+           style="display:inline-block;padding:13px 30px;background:#C9A84C;color:#fff;border-radius:50px;text-decoration:none;font-weight:700;font-size:15px;">
+          Set Up My Vendor Profile
+        </a>
+        <p style="color:#888;font-size:13px;margin-top:28px;">
+          Or copy and paste this link:<br>
+          <a href="${invitationLink}" style="color:#0F4C5C;word-break:break-all;">${invitationLink}</a>
+        </p>
+        <p style="color:#aaa;font-size:12px;margin-top:24px;">If you did not expect this invitation, you can safely ignore this email.</p>
+        ${EMAIL_FOOTER}
+      </div>
+    `,
+    text: `You've been invited to join Plani as a vendor by ${inviterName} from ${tenantName}.\n\n${message ? message + '\n\n' : ''}Set up your vendor profile here:\n${invitationLink}\n\nThis link expires in 7 days.`,
+  });
+}
+
+/**
  * Notify a user that support staff replied to their ticket.
  */
 async function sendTicketReply(to, subject, replyMessage, ticketId) {
@@ -503,6 +603,8 @@ async function sendTicketReply(to, subject, replyMessage, ticketId) {
 module.exports = {
   sendEmailOtp,
   sendInvitation,
+  sendVendorInvitation,
+  sendPasswordResetRequest,
   sendWelcome,
   sendPasswordChanged,
   sendPasswordReset,

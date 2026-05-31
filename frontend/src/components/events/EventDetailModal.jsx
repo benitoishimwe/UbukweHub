@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useLang } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api, { eventsAPI, staffAPI, vendorsAPI, guestCheckinAPI } from '../../services/api';
-import { X, FileText, Loader, Users, LayoutList, Camera, Calendar, MapPin, DollarSign, UserCheck, Pencil, Save, Trash2, ClipboardList, Plus, UserCircle, CheckCircle2, Circle, QrCode, Download, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useCallback } from 'react';
+import { X, FileText, Loader, Users, LayoutList, Camera, Calendar, MapPin, DollarSign, UserCheck, Pencil, Save, Trash2, ClipboardList, Plus, UserCircle, CheckCircle2, Circle, QrCode, Download, ToggleLeft, ToggleRight, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STATUS_COLORS = {
@@ -68,11 +69,69 @@ export default function EventDetailModal({ event, onClose, onUpdate }) {
   const [togglingCheckin, setTogglingCheckin] = useState(false);
   const canManageCheckin = ['tenant_admin', 'super_admin', 'event_manager'].includes(user?.role);
 
+  // Connect Vendor state
+  const [connectedVendors, setConnectedVendors] = useState([]);
+  const [vendorSearch, setVendorSearch] = useState('');
+  const [vendorSearchResults, setVendorSearchResults] = useState([]);
+  const [vendorSearchLoading, setVendorSearchLoading] = useState(false);
+  const [connectingVendorId, setConnectingVendorId] = useState(null);
+  const [disconnectingVendorId, setDisconnectingVendorId] = useState(null);
+  const canConnectVendors = ['tenant_admin', 'super_admin'].includes(user?.role);
+
   const eventId = event.eventId || event.event_id;
 
   useEffect(() => {
     if (canManageCheckin) fetchQrData();
   }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (canConnectVendors) {
+      vendorsAPI.getEventVendors(eventId)
+        .then((r) => setConnectedVendors(r.data || []))
+        .catch(() => {});
+    }
+  }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleVendorSearch = useCallback(async (q) => {
+    setVendorSearch(q);
+    if (!q.trim()) { setVendorSearchResults([]); return; }
+    setVendorSearchLoading(true);
+    try {
+      const { data } = await vendorsAPI.searchMarketplace({ search: q.trim(), size: 10 });
+      setVendorSearchResults(data.data || []);
+    } catch {
+      setVendorSearchResults([]);
+    } finally {
+      setVendorSearchLoading(false);
+    }
+  }, []);
+
+  const handleConnectVendor = async (vendorId) => {
+    setConnectingVendorId(vendorId);
+    try {
+      await vendorsAPI.connectToEvent(eventId, vendorId);
+      const vendor = vendorSearchResults.find((v) => v.vendorId === vendorId);
+      if (vendor) setConnectedVendors((prev) => [vendor, ...prev]);
+      toast.success(`${vendor?.name || 'Vendor'} connected to event`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to connect vendor');
+    } finally {
+      setConnectingVendorId(null);
+    }
+  };
+
+  const handleDisconnectVendor = async (vendorId) => {
+    setDisconnectingVendorId(vendorId);
+    try {
+      await vendorsAPI.disconnectFromEvent(eventId, vendorId);
+      setConnectedVendors((prev) => prev.filter((v) => v.vendorId !== vendorId));
+      toast.success('Vendor removed from event');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to disconnect vendor');
+    } finally {
+      setDisconnectingVendorId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -625,38 +684,80 @@ export default function EventDetailModal({ event, onClose, onUpdate }) {
               </div>
             </div>
 
-            {/* Vendors */}
+            {/* Vendors — connect from marketplace */}
             <div>
               <h3 className="font-bold text-[#2D2D2D] mb-3 flex items-center gap-2 text-sm">
-                <LayoutList size={16} className="text-[#C9A84C]" /> Assigned Vendors ({vendorIds.length})
+                <LayoutList size={16} className="text-[#C9A84C]" /> Connected Vendors ({connectedVendors.length})
               </h3>
-              <div className="flex gap-2 mb-3">
-                <select className="input-wedding flex-1 text-sm py-2" value={selectedVendor} onChange={e => setSelectedVendor(e.target.value)}>
-                  <option value="">Add vendor...</option>
-                  {allVendors.filter(v => !vendorIds.includes(v.vendorId || v.vendor_id)).map(v => (
-                    <option key={v.vendorId || v.vendor_id} value={v.vendorId || v.vendor_id}>{v.name} — {v.category}</option>
-                  ))}
-                </select>
-                <button onClick={handleAssignVendor} disabled={!selectedVendor} className="bg-[#C9A84C] text-white px-4 rounded-lg font-semibold text-sm disabled:opacity-40">Add</button>
-              </div>
+
+              {/* Search bar */}
+              {canConnectVendors && (
+                <div className="mb-3 space-y-2">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C9C]" />
+                    <input
+                      className="input-wedding pl-9 text-sm py-2"
+                      placeholder="Search marketplace vendors…"
+                      value={vendorSearch}
+                      onChange={(e) => handleVendorSearch(e.target.value)}
+                    />
+                    {vendorSearchLoading && <Loader size={13} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[#C9A84C]" />}
+                  </div>
+                  {vendorSearch && vendorSearchResults.length > 0 && (
+                    <div className="border border-[#EBE5DB] rounded-xl overflow-hidden divide-y divide-[#EBE5DB]">
+                      {vendorSearchResults.map((v) => {
+                        const alreadyConnected = connectedVendors.some((c) => c.vendorId === v.vendorId);
+                        return (
+                          <div key={v.vendorId} className="flex items-center gap-3 px-3 py-2.5 bg-white hover:bg-[#F9F6F0]">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-[#2D2D2D] truncate">{v.name}</p>
+                              <p className="text-xs text-[#5C5C5C] capitalize">{v.category}{v.location ? ` · ${v.location}` : ''}</p>
+                            </div>
+                            {alreadyConnected ? (
+                              <span className="text-xs text-emerald-600 font-semibold">Connected</span>
+                            ) : (
+                              <button
+                                onClick={() => handleConnectVendor(v.vendorId)}
+                                disabled={connectingVendorId === v.vendorId}
+                                className="px-3 py-1.5 bg-[#C9A84C] text-white text-xs rounded-lg font-semibold flex items-center gap-1 disabled:opacity-60"
+                              >
+                                {connectingVendorId === v.vendorId ? <Loader size={11} className="animate-spin" /> : <Plus size={11} />} Connect
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {vendorSearch && !vendorSearchLoading && vendorSearchResults.length === 0 && (
+                    <p className="text-xs text-[#9C9C9C] italic px-1">No registered vendors found for "{vendorSearch}"</p>
+                  )}
+                </div>
+              )}
+
+              {/* Connected vendor list */}
               <div className="space-y-2">
-                {assignedVendors.length === 0
-                  ? <p className="text-xs text-[#5C5C5C] italic">No vendors assigned yet.</p>
-                  : assignedVendors.map(v => v && (
-                    <div key={v.vendorId || v.vendor_id} className="p-3 border border-[#EBE5DB] rounded-xl flex items-center gap-3">
+                {connectedVendors.length === 0
+                  ? <p className="text-xs text-[#5C5C5C] italic">No vendors connected yet. Search above to find and connect vendors.</p>
+                  : connectedVendors.map((v) => (
+                    <div key={v.vendorId} className="p-3 border border-[#EBE5DB] rounded-xl flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[#C9A84C20] flex items-center justify-center">
                         <LayoutList size={14} className="text-[#C9A84C]" />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-[#2D2D2D]">{v.name}</p>
-                        <p className="text-xs text-[#5C5C5C]">{v.category}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#2D2D2D] truncate">{v.name}</p>
+                        <p className="text-xs text-[#5C5C5C] capitalize">{v.category}{v.location ? ` · ${v.location}` : ''}</p>
                       </div>
-                      <button
-                        onClick={() => handleRemoveVendor(v.vendorId || v.vendor_id)}
-                        className="p-1 text-[#5C5C5C] hover:text-[#D9534F] transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
+                      {canConnectVendors && (
+                        <button
+                          onClick={() => handleDisconnectVendor(v.vendorId)}
+                          disabled={disconnectingVendorId === v.vendorId}
+                          className="p-1.5 text-[#5C5C5C] hover:text-[#D9534F] transition-colors disabled:opacity-40"
+                          title="Disconnect vendor"
+                        >
+                          {disconnectingVendorId === v.vendorId ? <Loader size={13} className="animate-spin" /> : <X size={13} />}
+                        </button>
+                      )}
                     </div>
                   ))
                 }

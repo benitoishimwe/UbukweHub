@@ -507,6 +507,96 @@ router.get('/audit-logs', ...isAdminOrManager, async (req, res, next) => {
   }
 });
 
+// ─── POST /api/admin/vendors/invite ──────────────────────────────────────────
+// Tenant admin invites a vendor by email. A vendor must sign up themselves.
+router.post('/vendors/invite', ...isAdmin, async (req, res, next) => {
+  try {
+    const { role: callerRole, tenantId: callerTenantId } = req.user;
+    if (callerRole !== Roles.TENANT_ADMIN && callerRole !== Roles.SUPER_ADMIN) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const tenantId = callerRole === Roles.SUPER_ADMIN
+      ? req.body.tenantId || callerTenantId
+      : callerTenantId;
+
+    if (!tenantId) return badRequest(res, 'Tenant context required');
+
+    const { email, message } = req.body;
+    if (!email) return badRequest(res, 'email is required');
+
+    const invitation = await invitationService.createVendorInvitation({
+      tenantId,
+      email,
+      invitedBy: req.user.userId,
+      message: message || null,
+    });
+
+    return ok(res, invitation, 'Vendor invitation sent');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ─── GET /api/admin/vendors/search ───────────────────────────────────────────
+// Search public marketplace vendors for connecting to events.
+router.get('/vendors/search', ...isAdmin, async (req, res, next) => {
+  try {
+    const vendorService = require('../services/vendor.service');
+    const { search, category, page, size } = req.query;
+    const result = await vendorService.searchAvailableVendors({
+      search: search || undefined,
+      category: category || undefined,
+      page: page ? parseInt(page, 10) : 1,
+      size: size ? parseInt(size, 10) : 20,
+    });
+    return ok(res, result);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ─── GET /api/admin/events/:eventId/vendors ───────────────────────────────────
+// List vendors connected to an event.
+router.get('/events/:eventId/vendors', ...isAdmin, async (req, res, next) => {
+  try {
+    const vendorService = require('../services/vendor.service');
+    const tenantId = req.user.role === Roles.SUPER_ADMIN ? undefined : req.user.tenantId;
+    const vendors = await vendorService.getEventVendors(req.params.eventId, tenantId || req.user.tenantId);
+    return ok(res, vendors);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ─── POST /api/admin/events/:eventId/vendors/:vendorId ───────────────────────
+// Connect a vendor to an event.
+router.post('/events/:eventId/vendors/:vendorId', ...isAdmin, async (req, res, next) => {
+  try {
+    const vendorService = require('../services/vendor.service');
+    const tenantId = req.user.tenantId;
+    if (!tenantId) return badRequest(res, 'Tenant context required');
+    const result = await vendorService.connectVendorToEvent(req.params.eventId, req.params.vendorId, tenantId);
+    return ok(res, result, 'Vendor connected to event');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ─── DELETE /api/admin/events/:eventId/vendors/:vendorId ─────────────────────
+// Disconnect a vendor from an event.
+router.delete('/events/:eventId/vendors/:vendorId', ...isAdmin, async (req, res, next) => {
+  try {
+    const vendorService = require('../services/vendor.service');
+    const tenantId = req.user.tenantId;
+    if (!tenantId) return badRequest(res, 'Tenant context required');
+    const result = await vendorService.disconnectVendorFromEvent(req.params.eventId, req.params.vendorId, tenantId);
+    return ok(res, result, 'Vendor disconnected from event');
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // ─── GET /api/admin/dashboard ─────────────────────────────────────────────────
 // Dashboard stats scoped by tenant (tenant_admin / event_manager) or platform-wide (super_admin).
 router.get('/dashboard', ...isAdminOrManager, async (req, res, next) => {

@@ -225,4 +225,32 @@ router.post('/accept-invitation', async (req, res, next) => {
   }
 });
 
+// ─── POST /api/auth/forgot-password ──────────────────────────────────────────
+// Public. Request a self-service password reset link via email.
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return badRequest(res, 'email is required');
+    await authService.forgotPassword(email);
+    // Always 200 — don't reveal whether the email exists
+    return ok(res, null, 'If an account with that email exists, a reset link has been sent.');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ─── POST /api/auth/reset-password ───────────────────────────────────────────
+// Public. Set a new password using the token from the reset email.
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return badRequest(res, 'token and password are required');
+    if (password.length < 8)  return badRequest(res, 'password must be at least 8 characters');
+    await authService.resetPassword(token, password);
+    return ok(res, null, 'Password updated successfully. You can now sign in.');
+  } catch (err) {
+    return next(err);
+  }
+});
+
 module.exports = router;

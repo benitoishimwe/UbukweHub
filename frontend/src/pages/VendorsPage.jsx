@@ -2,11 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useLang } from '../contexts/LanguageContext';
 import { vendorsAPI } from '../services/api';
 import {
-  Plus, Search, Star, Store, Phone, Mail, MapPin, Loader, X,
+  Search, Star, Store, Phone, Mail, MapPin, Loader, X,
   Copy, CheckCheck, ExternalLink, CheckCircle, XCircle, Clock,
-  Globe, StickyNote, Pencil,
+  Globe, StickyNote, Pencil, UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import InviteVendorModal from '../components/InviteVendorModal';
 
 const CATEGORY_COLORS = {
   catering:      'bg-orange-100 text-orange-700',
@@ -472,65 +473,6 @@ function VendorDetailModal({ vendor: init, onClose, onUpdated }) {
   );
 }
 
-// ── Add Vendor Modal ──────────────────────────────────────────────────────────
-function AddVendorModal({ onClose, onSave }) {
-  const [form, setForm] = useState({ name: '', category: 'catering', contactName: '', email: '', phone: '', location: 'Kigali, Rwanda' });
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { data } = await vendorsAPI.create(form);
-      onSave(data);
-      toast.success('Vendor added');
-    } catch { toast.error('Failed to add vendor'); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-scale-in">
-        <div className="p-6 border-b border-[#EBE5DB] flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[#2D2D2D]" style={{fontFamily:'Playfair Display,serif'}}>Add Vendor</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[#F5F0E8] text-[#5C5C5C]"><X size={18} /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Vendor Name</label>
-            <input className="input-wedding" placeholder="Kigali Events Catering" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Category</label>
-              <select className="input-wedding" value={form.category} onChange={(e) => setForm({...form, category: e.target.value})}>
-                {['catering','decor','music','photography','transport','floristry','entertainment'].map(c => <option key={c} value={c} className="capitalize">{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Contact Person</label>
-              <input className="input-wedding" placeholder="Jean Doe" value={form.contactName} onChange={(e) => setForm({...form, contactName: e.target.value})} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Phone</label>
-              <input className="input-wedding" placeholder="+250788…" value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Email</label>
-              <input className="input-wedding" type="email" placeholder="vendor@example.rw" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 h-11 rounded-full border-2 border-[#EBE5DB] text-[#5C5C5C] font-medium text-sm">Cancel</button>
-            <button type="submit" disabled={loading} className="flex-1 btn-gold h-11 flex items-center justify-center text-sm">
-              {loading ? <Loader size={16} className="animate-spin" /> : 'Save Vendor'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 // ── Vendor Card ───────────────────────────────────────────────────────────────
 function VendorCard({ vendor, onClick }) {
@@ -594,7 +536,7 @@ export default function VendorsPage() {
   const [search,       setSearch]       = useState('');
   const [category,     setCategory]     = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showAdd,      setShowAdd]      = useState(false);
+  const [showInvite,   setShowInvite]   = useState(false);
   const [detailV,      setDetailV]      = useState(null);
 
   const fetchVendors = useCallback(async () => {
@@ -644,8 +586,8 @@ export default function VendorsPage() {
             </p>
           )}
         </div>
-        <button onClick={() => setShowAdd(true)} className="btn-gold px-5 py-2.5 flex items-center gap-2 text-sm">
-          <Plus size={18} /> Add Vendor
+        <button onClick={() => setShowInvite(true)} className="btn-gold px-5 py-2.5 flex items-center gap-2 text-sm">
+          <UserPlus size={18} /> Invite Vendor
         </button>
       </div>
 
@@ -653,7 +595,7 @@ export default function VendorsPage() {
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C5C5C]" />
-          <input className="input-wedding pl-10" placeholder="Search vendors…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input className="input-wedding" style={{ paddingLeft: '2.5rem' }} placeholder="Search vendors…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <select className="input-wedding w-full sm:w-48" value={category} onChange={(e) => setCategory(e.target.value)}>
           <option value="">All Categories</option>
@@ -703,11 +645,8 @@ export default function VendorsPage() {
         </div>
       )}
 
-      {showAdd && (
-        <AddVendorModal
-          onClose={() => setShowAdd(false)}
-          onSave={(v) => { setVendors(p => [v, ...p]); setShowAdd(false); }}
-        />
+      {showInvite && (
+        <InviteVendorModal onClose={() => setShowInvite(false)} />
       )}
 
       {detailV && (

@@ -63,6 +63,14 @@ const MIGRATIONS = [
 
   `CREATE INDEX IF NOT EXISTS idx_gc_event_id ON guest_checkins(event_id)`,
 
+  // ── Drop CHECK constraints on subscriptions.plan / status and
+  //    tenants.subscription_tier that block valid values like 'trial'.
+  //    All use IF EXISTS so they are safe no-ops once already dropped. ────────
+  `ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_plan_check`,
+  `ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_status_check`,
+  `ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_plan_status_check`,
+  `ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_subscription_tier_check`,
+
   // ── Support tickets ───────────────────────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS support_tickets (
      ticket_id   TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -114,6 +122,31 @@ const MIGRATIONS = [
   )`,
 
   `CREATE INDEX IF NOT EXISTS idx_cm_conversation_id ON chatbot_messages(conversation_id)`,
+
+  // ── Vendor invite flow ────────────────────────────────────────────────────
+  `ALTER TABLE tenant_invitations ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'team'`,
+
+  // ── Event-vendor junction table ───────────────────────────────────────────
+  `CREATE TABLE IF NOT EXISTS event_vendors (
+     event_id     UUID NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
+     vendor_id    UUID NOT NULL REFERENCES vendors(vendor_id) ON DELETE CASCADE,
+     connected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+     PRIMARY KEY (event_id, vendor_id)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_ev_event_id  ON event_vendors(event_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_ev_vendor_id ON event_vendors(vendor_id)`,
+
+  // ── Self-service password reset tokens ───────────────────────────────────
+  `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+     token_id   TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+     user_id    TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+     token      TEXT NOT NULL UNIQUE,
+     expires_at TIMESTAMPTZ NOT NULL,
+     used_at    TIMESTAMPTZ,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_prt_token ON password_reset_tokens(token)`,
 ];
 
 async function runMigrations() {

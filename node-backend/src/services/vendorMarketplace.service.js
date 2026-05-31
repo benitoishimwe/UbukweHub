@@ -18,8 +18,14 @@ const { AppError } = require('../middleware/errorHandler');
 async function browseVendors({ category, search, minPrice, maxPrice, page = 1, size = 20 } = {}) {
   const skip = (page - 1) * size;
 
-  // Show vendors approved by admin
-  const where = { isActive: true, approvedByAdmin: true };
+  // Show vendors that have opted into marketplace (isPublic) OR have been admin-approved
+  const where = {
+    isActive: true,
+    OR: [
+      { isPublic: true },
+      { approvedByAdmin: true },
+    ],
+  };
   if (category) where.category = category;
   if (search) {
     where.OR = [
@@ -44,20 +50,21 @@ async function browseVendors({ category, search, minPrice, maxPrice, page = 1, s
   ]);
 
   const enriched = vendors.map((v) => ({
-    vendorId:    v.vendorId,
-    name:        v.name,
-    category:    v.category,
-    contactName: v.contactName,
-    email:       v.email,
-    phone:       v.phone,
-    location:    v.location,
-    rating:      Number(v.rating),
-    isVerified:  v.isVerified,
-    priceMin:    v.profile?.priceMin  ? Number(v.profile.priceMin)  : null,
-    priceMax:    v.profile?.priceMax  ? Number(v.profile.priceMax)  : null,
-    currency:    v.profile?.currency  || 'USD',
-    bio:         v.profile?.bio       || null,
-    tenantId:    v.tenantId,
+    vendorId:        v.vendorId,
+    name:            v.name,
+    category:        v.category,
+    contactName:     v.contactName,
+    email:           v.email,
+    phone:           v.phone,
+    location:        v.location,
+    rating:          Number(v.rating),
+    isVerified:      v.isVerified,
+    approvedByAdmin: v.approvedByAdmin,
+    priceMin:        v.profile?.priceMin  ? Number(v.profile.priceMin)  : null,
+    priceMax:        v.profile?.priceMax  ? Number(v.profile.priceMax)  : null,
+    currency:        v.profile?.currency  || 'USD',
+    bio:             v.profile?.bio       || null,
+    tenantId:        v.tenantId,
   }));
 
   return {

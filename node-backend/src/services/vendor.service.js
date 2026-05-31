@@ -1,7 +1,12 @@
 'use strict';
 
+const bcrypt = require('bcryptjs');
 const prisma = require('../config/prisma');
 const { AppError } = require('../middleware/errorHandler');
+const { createToken } = require('../utils/jwt');
+const subscriptionService = require('./subscription.service');
+
+const BCRYPT_ROUNDS = 10;
 
 /**
  * List vendors for a tenant with optional filters and pagination.
@@ -336,6 +341,14 @@ async function updateVendorSelf(userId, updates) {
       update: profileData,
       create: { tenantId: vendor.tenantId, vendorId: vendor.vendorId, ...profileData },
     });
+
+    // Keep Vendor.isPublic in sync with VendorProfile.isMarketplaceActive
+    if (updates.isMarketplaceActive !== undefined) {
+      await prisma.vendor.update({
+        where: { vendorId: vendor.vendorId },
+        data: { isPublic: updates.isMarketplaceActive },
+      });
+    }
   }
 
   // Return fresh full vendor object
@@ -534,6 +547,207 @@ async function markInquiryRead(inquiryId, userId) {
   return prisma.vendorInquiry.update({ where: { inquiryId }, data: { status: 'read' } });
 }
 
+/**
+ * Accept a vendor invitation: create user account + vendor profile, return JWT.
+ *
+ * @param {object} params
+ * @param {string} params.token       - Invitation token from email link
+ * @param {string} params.name        - Contact person name
+ * @param {string} params.password    - Password for the new account
+ * @param {string} params.businessName - Vendor / business name
+ * @param {string} params.category    - Vendor category
+ * @param {string} [params.phone]
+ * @param {string} [params.location]
+ * @param {string} [params.country]
+ * @param {string} [params.description]
+ * @returns {Promise<{ token: string, user: object, vendor: object }>}
+ */
+async function acceptVendorInvite({ token, name, password, businessName, category, phone, location, country, description }) {
+  const invitation = await prisma.tenantInvitation.findUnique({ where: { token } });
+
+  if (!invitation) throw new AppError('Invitation not found', 404, 'INVITATION_NOT_FOUND');
+  if (invitation.type !== 'vendor') throw new AppError('Invalid invitation type', 400, 'INVALID_INVITATION_TYPE');
+  if (invitation.expiresAt < new Date()) throw new AppError('This invitation has expired. Please ask for a new one.', 400, 'INVITATION_EXPIRED');
+  if (invitation.acceptedAt) throw new AppError('This invitation has already been accepted', 400, 'INVITATION_ALREADY_ACCEPTED');
+
+  const existingUser = await prisma.user.findUnique({ where: { email: invitation.email.toLowerCase() } });
+  if (existingUser) throw new AppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
+
+  if (!businessName) throw new AppError('Business name is required', 400, 'BUSINESS_NAME_REQUIRED');
+  if (!category) throw new AppError('Business category is required', 400, 'CATEGORY_REQUIRED');
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const autoPublic = process.env.VENDOR_AUTO_PUBLIC === 'true';
+
+  const user = await prisma.user.create({
+    data: {
+      email: invitation.email.toLowerCase(),
+      passwordHash,
+      name,
+      role: 'vendor',
+      tenantId: invitation.tenantId,
+      isActive: true,
+    },
+  });
+
+  const vendor = await prisma.vendor.create({
+    data: {
+      tenantId: invitation.tenantId,
+      userId: user.userId,
+      name: businessName,
+      category,
+      contactName: name,
+      email: invitation.email.toLowerCase(),
+      phone: phone || null,
+      location: location || null,
+      country: country || null,
+      description: description || null,
+      isActive: true,
+      isPublic: autoPublic,
+      onboardingComplete: true,
+      approvedByAdmin: false,
+      profile: {
+        create: {
+          tenantId: invitation.tenantId,
+          bio: description || null,
+          isMarketplaceActive: autoPublic,
+        },
+      },
+      onboarding: {
+        create: {
+          stepBio: !!description,
+          stepPricing: false,
+          stepPhotos: false,
+          stepMarketplaceConsent: true,
+          completedAt: new Date(),
+        },
+      },
+    },
+    include: { profile: true },
+  });
+
+  await prisma.tenantInvitation.update({
+    where: { invitationId: invitation.invitationId },
+    data: { acceptedAt: new Date() },
+  });
+
+  await subscriptionService.createFreeSubscription(user.userId, user.tenantId).catch(() => {});
+
+  const jwtToken = createToken(user.userId, user.role, user.email, user.tenantId);
+
+  const { passwordHash: _ph, ...safeUser } = user;
+  return { token: jwtToken, user: safeUser, vendor };
+}
+
+/**
+ * Search marketplace vendors for the "connect vendor to event" picker.
+ * Returns vendors with onboardingComplete=true (regardless of approval state
+ * so tenant admins can connect even pending vendors to their events).
+ *
+ * @param {object} params
+ * @param {string} [params.search]
+ * @param {string} [params.category]
+ * @param {number} [params.page=1]
+ * @param {number} [params.size=20]
+ */
+async function searchAvailableVendors({ search, category, page = 1, size = 20 }) {
+  const skip = (page - 1) * size;
+  const where = { isActive: true, onboardingComplete: true };
+
+  if (category) where.category = category;
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+      { location: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  const [vendors, total] = await Promise.all([
+    prisma.vendor.findMany({
+      where,
+      skip,
+      take: size,
+      orderBy: [{ approvedByAdmin: 'desc' }, { rating: 'desc' }, { createdAt: 'desc' }],
+      include: {
+        profile: { select: { priceMin: true, priceMax: true, currency: true, tags: true } },
+      },
+    }),
+    prisma.vendor.count({ where }),
+  ]);
+
+  return {
+    data: vendors,
+    meta: { total, page, size, totalPages: Math.ceil(total / size) },
+  };
+}
+
+/**
+ * Get all vendors connected to an event.
+ *
+ * @param {string} eventId
+ * @param {string} tenantId
+ */
+async function getEventVendors(eventId, tenantId) {
+  const event = await prisma.event.findUnique({ where: { eventId }, select: { tenantId: true } });
+  if (!event) throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
+  if (event.tenantId && event.tenantId !== tenantId) throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
+
+  const connections = await prisma.eventVendor.findMany({
+    where: { eventId },
+    include: {
+      vendor: {
+        include: {
+          profile: { select: { priceMin: true, priceMax: true, currency: true } },
+        },
+      },
+    },
+    orderBy: { connectedAt: 'desc' },
+  });
+
+  return connections.map((c) => ({ ...c.vendor, connectedAt: c.connectedAt }));
+}
+
+/**
+ * Connect a vendor to an event (creates EventVendor row).
+ *
+ * @param {string} eventId
+ * @param {string} vendorId
+ * @param {string} tenantId
+ */
+async function connectVendorToEvent(eventId, vendorId, tenantId) {
+  const event = await prisma.event.findUnique({ where: { eventId }, select: { tenantId: true } });
+  if (!event) throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
+  if (event.tenantId && event.tenantId !== tenantId) throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
+
+  const vendor = await prisma.vendor.findUnique({ where: { vendorId }, select: { vendorId: true, isActive: true } });
+  if (!vendor || !vendor.isActive) throw new AppError('Vendor not found or inactive', 404, 'VENDOR_NOT_FOUND');
+
+  await prisma.eventVendor.upsert({
+    where: { eventId_vendorId: { eventId, vendorId } },
+    create: { eventId, vendorId },
+    update: {},
+  });
+
+  return { eventId, vendorId, connected: true };
+}
+
+/**
+ * Remove a vendor from an event.
+ *
+ * @param {string} eventId
+ * @param {string} vendorId
+ * @param {string} tenantId
+ */
+async function disconnectVendorFromEvent(eventId, vendorId, tenantId) {
+  const event = await prisma.event.findUnique({ where: { eventId }, select: { tenantId: true } });
+  if (!event) throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
+  if (event.tenantId && event.tenantId !== tenantId) throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
+
+  await prisma.eventVendor.deleteMany({ where: { eventId, vendorId } });
+  return { eventId, vendorId, connected: false };
+}
+
 module.exports = {
   listVendors,
   getVendorById,
@@ -557,4 +771,9 @@ module.exports = {
   getVendorPortalAnalytics,
   incrementViewCount,
   markInquiryRead,
+  acceptVendorInvite,
+  searchAvailableVendors,
+  getEventVendors,
+  connectVendorToEvent,
+  disconnectVendorFromEvent,
 };

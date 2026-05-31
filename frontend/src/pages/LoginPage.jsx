@@ -3,8 +3,75 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLang, LANGUAGES } from '../contexts/LanguageContext';
 import { authAPI } from '../services/api';
-import { Eye, EyeOff, Loader, Globe, Sparkles, Calendar, Users, MapPin, Briefcase, Heart, Building2 } from 'lucide-react';
+import { Eye, EyeOff, Loader, Globe, Sparkles, Calendar, Users, MapPin, Briefcase, Heart, Building2, X, CheckCircle2 } from 'lucide-react';
 import PlaniLogo from '../components/PlaniLogo';
+
+function ForgotPasswordModal({ onClose }) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await authAPI.forgotPassword(email.trim());
+      setSent(true);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 animate-scale-in">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-[#111827]" style={{ fontFamily: 'Poppins,sans-serif' }}>Reset password</h3>
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[#F3F4F6] text-[#6B7280]"><X size={18} /></button>
+        </div>
+
+        {sent ? (
+          <div className="text-center py-4">
+            <CheckCircle2 size={44} className="text-emerald-500 mx-auto mb-3" />
+            <p className="text-sm font-semibold text-[#111827] mb-1">Check your email</p>
+            <p className="text-xs text-[#6B7280]">
+              If <strong>{email}</strong> has an account, we've sent a reset link. Check your inbox (and spam folder).
+            </p>
+            <button onClick={onClose} className="mt-5 w-full btn-primary h-10 text-sm">Done</button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-[#6B7280] mb-4">
+              Enter your account email and we'll send you a link to reset your password.
+            </p>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-[#111827] mb-1">Email address</label>
+                <input
+                  className="input-wedding"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                  required
+                  autoFocus
+                />
+              </div>
+              {error && <p className="text-xs text-[#DC2626]">{error}</p>}
+              <button type="submit" disabled={loading} className="w-full btn-primary h-10 flex items-center justify-center gap-2 text-sm">
+                {loading ? <Loader size={15} className="animate-spin" /> : 'Send reset link'}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const REGISTER_ROLES = [
   { value: 'client',        label: 'Couple / Client',    icon: Heart,      desc: 'Planning your own event' },
@@ -49,6 +116,7 @@ export default function LoginPage() {
   const [mfaMethod, setMfaMethod] = useState('totp');
   const [mfaCode, setMfaCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [showForgotPwd, setShowForgotPwd] = useState(false);
 
   const validate = () => {
     const errs = {};
@@ -136,6 +204,7 @@ export default function LoginPage() {
   };
 
   return (
+    <>
     <div className="min-h-screen flex flex-col lg:flex-row" style={{background:'#F9F9FB'}}>
       {/* Left Panel - Hero */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
@@ -195,53 +264,53 @@ export default function LoginPage() {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 lg:px-12">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-10 lg:px-12 lg:py-12">
         {/* Mobile Logo */}
-        <div className="lg:hidden flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-[#0F4C5C] flex items-center justify-center">
-            <span className="text-white font-bold text-lg" style={{fontFamily:'Poppins,sans-serif'}}>P</span>
+        <div className="lg:hidden flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-xl bg-[#0F4C5C] flex items-center justify-center">
+            <span className="text-white font-bold text-sm" style={{fontFamily:'Poppins,sans-serif'}}>P</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#111827]" style={{fontFamily:'Poppins,sans-serif'}}>Plani</h1>
+          <h1 className="text-xl font-bold text-[#111827]" style={{fontFamily:'Poppins,sans-serif'}}>Plani</h1>
         </div>
 
-        <div className="w-full max-w-md animate-scale-in">
+        <div className="w-full max-w-sm sm:max-w-md animate-scale-in">
           {/* Language Toggle */}
-          <div className="flex justify-between items-center mb-4">
-            <Link to="/" className="text-sm text-[#0F4C5C] hover:underline font-medium">← Back to home</Link>
+          <div className="flex justify-between items-center mb-3">
+            <Link to="/" className="text-xs sm:text-sm text-[#0F4C5C] hover:underline font-medium">← Back to home</Link>
             <div className="relative">
               <select
                 value={lang}
                 onChange={e => switchLang(e.target.value)}
                 data-testid="lang-toggle-login"
-                className="appearance-none flex items-center gap-2 pl-3 pr-7 py-1.5 rounded-full bg-white border border-[#E5E7EB] text-sm text-[#6B7280] hover:border-[#0F4C5C] transition-colors cursor-pointer focus:outline-none focus:border-[#0F4C5C]"
+                className="appearance-none flex items-center gap-2 pl-2.5 pr-6 py-1 rounded-full bg-white border border-[#E5E7EB] text-xs sm:text-sm text-[#6B7280] hover:border-[#0F4C5C] transition-colors cursor-pointer focus:outline-none focus:border-[#0F4C5C]"
               >
                 {LANGUAGES.map(({ code, flag, label }) => (
                   <option key={code} value={code}>{flag} {label}</option>
                 ))}
               </select>
-              <Globe size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+              <Globe size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.08)] p-8">
+          <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.08)] p-5 sm:p-8">
             {!mfaState ? (
               <>
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-[#111827]" style={{fontFamily:'Poppins,sans-serif'}}>
+                <div className="mb-4 sm:mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#111827]" style={{fontFamily:'Poppins,sans-serif'}}>
                     {tab === 'login' ? 'Welcome back' : 'Create account'}
                   </h2>
-                  <p className="text-[#6B7280] text-sm mt-1">
+                  <p className="text-[#6B7280] text-xs sm:text-sm mt-1">
                     {tab === 'login' ? 'Sign in to your Plani workspace' : 'Start your 14-day free trial'}
                   </p>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-1 bg-[#F9F9FB] rounded-xl p-1 mb-6">
+                <div className="flex gap-1 bg-[#F9F9FB] rounded-xl p-1 mb-4 sm:mb-6">
                   {['login', 'register'].map((t_) => (
                     <button
                       key={t_}
                       onClick={() => { setTab(t_); setFieldErrors({}); }}
-                      className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      className={`flex-1 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
                         tab === t_ ? 'bg-white text-[#0F4C5C] shadow-sm' : 'text-[#6B7280]'
                       }`}
                       data-testid={`tab-${t_}`}
@@ -251,37 +320,37 @@ export default function LoginPage() {
                   ))}
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4" noValidate>
                   {tab === 'register' && (
                     <>
                       {/* Role selector */}
                       <div>
-                        <label className="block text-sm font-medium text-[#111827] mb-2">I am a…</label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <label className="block text-xs sm:text-sm font-medium text-[#111827] mb-1.5">I am a…</label>
+                        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                           {REGISTER_ROLES.map(({ value, label, icon: Icon, desc }) => (
                             <button
                               key={value}
                               type="button"
                               onClick={() => setForm({ ...form, role: value })}
-                              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-center transition-all ${
+                              className={`flex flex-col items-center gap-1 p-2 sm:p-3 rounded-xl border-2 text-center transition-all ${
                                 form.role === value
                                   ? 'border-[#0F4C5C] bg-[#E8F4F8] text-[#0F4C5C]'
                                   : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#0F4C5C]'
                               }`}
                               data-testid={`role-${value}`}
                             >
-                              <Icon size={18} className={form.role === value ? 'text-[#0F4C5C]' : 'text-[#9CA3AF]'} />
-                              <span className="text-xs font-semibold leading-tight">{label}</span>
+                              <Icon size={16} className={form.role === value ? 'text-[#0F4C5C]' : 'text-[#9CA3AF]'} />
+                              <span className="text-[10px] sm:text-xs font-semibold leading-tight">{label}</span>
                             </button>
                           ))}
                         </div>
-                        <p className="text-xs text-[#6B7280] mt-1.5 text-center">
+                        <p className="text-[10px] sm:text-xs text-[#6B7280] mt-1 text-center">
                           {REGISTER_ROLES.find(r => r.value === form.role)?.desc}
                         </p>
                       </div>
                       {/* Full name */}
                       <div>
-                        <label className="block text-sm font-medium text-[#111827] mb-1.5">{t('auth.name')}</label>
+                        <label className="block text-xs sm:text-sm font-medium text-[#111827] mb-1">{t('auth.name')}</label>
                         <input
                           className={`input-wedding ${fieldErrors.name ? 'border-[#DC2626] focus:border-[#DC2626]' : ''}`}
                           placeholder="Amina Uwase"
@@ -289,12 +358,12 @@ export default function LoginPage() {
                           onChange={(e) => { setForm({ ...form, name: e.target.value }); setFieldErrors(p => ({ ...p, name: '' })); }}
                           data-testid="register-name"
                         />
-                        {fieldErrors.name && <p className="text-xs text-[#DC2626] mt-1">{fieldErrors.name}</p>}
+                        {fieldErrors.name && <p className="text-xs text-[#DC2626] mt-0.5">{fieldErrors.name}</p>}
                       </div>
                     </>
                   )}
                   <div>
-                    <label className="block text-sm font-medium text-[#111827] mb-1.5">{t('auth.email')}</label>
+                    <label className="block text-xs sm:text-sm font-medium text-[#111827] mb-1">{t('auth.email')}</label>
                     <input
                       className={`input-wedding ${fieldErrors.email ? 'border-[#DC2626] focus:border-[#DC2626]' : ''}`}
                       type="email"
@@ -303,13 +372,13 @@ export default function LoginPage() {
                       onChange={(e) => { setForm({ ...form, email: e.target.value }); setFieldErrors(p => ({ ...p, email: '' })); }}
                       data-testid="login-email"
                     />
-                    {fieldErrors.email && <p className="text-xs text-[#DC2626] mt-1">{fieldErrors.email}</p>}
+                    {fieldErrors.email && <p className="text-xs text-[#DC2626] mt-0.5">{fieldErrors.email}</p>}
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-sm font-medium text-[#111827]">{t('auth.password')}</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs sm:text-sm font-medium text-[#111827]">{t('auth.password')}</label>
                       {tab === 'login' && (
-                        <span className="text-xs text-[#0F4C5C] hover:underline cursor-pointer font-medium">Forgot password?</span>
+                        <button type="button" onClick={() => setShowForgotPwd(true)} className="text-xs text-[#0F4C5C] hover:underline font-medium">Forgot password?</button>
                       )}
                     </div>
                     <div className="relative">
@@ -339,7 +408,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="btn-primary w-full h-12 flex items-center justify-center gap-2 text-base"
+                    className="btn-primary w-full h-10 sm:h-12 flex items-center justify-center gap-2 text-sm sm:text-base"
                     data-testid="login-submit"
                   >
                     {loading ? <Loader size={18} className="animate-spin" /> : null}
@@ -348,11 +417,11 @@ export default function LoginPage() {
                 </form>
 
                 {tab === 'register' && (
-                  <p className="text-xs text-[#6B7280] text-center mt-4">
+                  <p className="text-[10px] sm:text-xs text-[#6B7280] text-center mt-3">
                     By registering you agree to our{' '}
-                    <a href="#" className="text-[#0F4C5C] hover:underline">Terms of Service</a>
+                    <Link to="/terms" target="_blank" className="text-[#0F4C5C] hover:underline">Terms of Service</Link>
                     {' '}and{' '}
-                    <a href="#" className="text-[#0F4C5C] hover:underline">Privacy Policy</a>
+                    <Link to="/privacy-policy" target="_blank" className="text-[#0F4C5C] hover:underline">Privacy Policy</Link>
                   </p>
                 )}
               </>
@@ -436,5 +505,8 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+
+    {showForgotPwd && <ForgotPasswordModal onClose={() => setShowForgotPwd(false)} />}
+    </>
   );
 }

@@ -31,6 +31,8 @@ import MarketplacePage from './pages/MarketplacePage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import PublicSaveTheDatePage from './pages/PublicSaveTheDatePage';
 import AcceptInvitationPage from './pages/AcceptInvitationPage';
+import AcceptVendorInvite from './pages/AcceptVendorInvite';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import OnboardingWizardPage from './pages/OnboardingWizardPage';
 import MessagesPage from './pages/MessagesPage';
 import BillingPage from './pages/BillingPage';
@@ -78,7 +80,9 @@ function AppRouter() {
       <Route path="/login"              element={<LoginPage />} />
       <Route path="/auth/callback"      element={<AuthCallback />} />
       <Route path="/upload/:token"      element={<GuestUploadPage />} />
-      <Route path="/accept-invitation"  element={<AcceptInvitationPage />} />
+      <Route path="/accept-invitation"       element={<AcceptInvitationPage />} />
+      <Route path="/accept-vendor-invite"    element={<AcceptVendorInvite />} />
+      <Route path="/reset-password"          element={<ResetPasswordPage />} />
       <Route path="/marketplace"        element={<MarketplacePage />} />
       <Route path="/card/:designId"     element={<PublicSaveTheDatePage />} />
       <Route path="/guest/checkin/:eventId" element={<GuestCheckinPage />} />

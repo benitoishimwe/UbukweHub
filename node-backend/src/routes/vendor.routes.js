@@ -99,16 +99,14 @@ router.get('/', authenticate, async (req, res, next) => {
   }
 });
 
-// ─── POST / — create vendor ───────────────────────────────────────────────────
+// ─── POST / — create vendor (super_admin platform-level only) ────────────────
 router.post(
   '/',
   authenticate,
-  requireRole(Roles.TENANT_ADMIN, Roles.SUPER_ADMIN),
+  requireRole(Roles.SUPER_ADMIN),
   async (req, res, next) => {
     try {
-      const tenantId = req.user.tenantId;
-      if (!tenantId) return R.badRequest(res, 'Tenant context required');
-
+      const tenantId = req.user.tenantId || req.body.tenantId;
       const { name, category, contactName, email, phone, location } = req.body;
       if (!name) return R.badRequest(res, 'Vendor name is required');
       if (!category) return R.badRequest(res, 'Vendor category is required');
@@ -129,6 +127,38 @@ router.post(
     }
   }
 );
+
+// ─── GET /accept-invite — preview vendor invite info ─────────────────────────
+router.get('/accept-invite', async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    if (!token) return R.badRequest(res, 'token is required');
+    const invitationService = require('../services/invitation.service');
+    const preview = await invitationService.previewVendorInvitation(token);
+    return R.ok(res, preview);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /accept-invite — accept vendor invitation, create account ───────────
+router.post('/accept-invite', async (req, res, next) => {
+  try {
+    const { token, name, password, businessName, category, phone, location, country, description } = req.body;
+    if (!token) return R.badRequest(res, 'token is required');
+    if (!name) return R.badRequest(res, 'name is required');
+    if (!password || password.length < 8) return R.badRequest(res, 'password must be at least 8 characters');
+    if (!businessName) return R.badRequest(res, 'businessName is required');
+    if (!category) return R.badRequest(res, 'category is required');
+
+    const result = await vendorService.acceptVendorInvite({
+      token, name, password, businessName, category, phone, location, country, description,
+    });
+    return R.created(res, result, 'Vendor account created — welcome to Plani!');
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ─── Vendor Portal routes (must be declared BEFORE /:vendorId) ───────────────
 

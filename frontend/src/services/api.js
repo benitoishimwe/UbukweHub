@@ -53,6 +53,8 @@ export const authAPI = {
   verifyTotpSetup: (code) => api.post('/auth/verify-totp-setup', { code }),
   previewInvitation: (token) => api.get(`/auth/invitation/${token}`),
   acceptInvitation: (data) => api.post('/auth/accept-invitation', data),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
 // Inventory
@@ -133,6 +135,16 @@ export const vendorsAPI = {
   approve: (id) => api.post(`/vendors/${id}/approve`),
   reject: (id, data) => api.post(`/vendors/${id}/reject`, data),
   updateInternalNotes: (id, notes) => api.patch(`/vendors/${id}/internal-notes`, { notes }),
+  // Invite flow
+  inviteVendor: (data) => api.post('/admin/vendors/invite', data),
+  searchMarketplace: (params) => api.get('/admin/vendors/search', { params }),
+  // Vendor invite acceptance (public)
+  previewInvite: (token) => api.get('/vendors/accept-invite', { params: { token } }),
+  acceptInvite: (data) => api.post('/vendors/accept-invite', data),
+  // Event-vendor connections
+  getEventVendors: (eventId) => api.get(`/admin/events/${eventId}/vendors`),
+  connectToEvent: (eventId, vendorId) => api.post(`/admin/events/${eventId}/vendors/${vendorId}`),
+  disconnectFromEvent: (eventId, vendorId) => api.delete(`/admin/events/${eventId}/vendors/${vendorId}`),
 };
 
 // Vendor self-service — legacy /me routes (kept for backward compat)

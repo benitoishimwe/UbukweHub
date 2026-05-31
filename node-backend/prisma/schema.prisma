@@ -135,6 +135,7 @@ model Event {
   guestCheckinAttempts GuestCheckinAttempt[]
   guestCheckins        GuestCheckin[]
   channelMessages      ChannelMessage[]
+  connectedVendors     EventVendor[]
 
   @@map("events")
 }
@@ -255,15 +256,16 @@ model Vendor {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  tenant     Tenant?            @relation(fields: [tenantId], references: [tenantId])
-  linkedUser User?              @relation("VendorUser", fields: [userId], references: [userId])
-  profile    VendorProfile?
-  portfolio  VendorPortfolio[]
-  reviews    VendorReview[]
-  favorites  VendorFavorite[]
-  inquiries  VendorInquiry[]
-  onboarding VendorOnboarding?
-  analytics  VendorAnalytics[]
+  tenant          Tenant?            @relation(fields: [tenantId], references: [tenantId])
+  linkedUser      User?              @relation("VendorUser", fields: [userId], references: [userId])
+  profile         VendorProfile?
+  portfolio       VendorPortfolio[]
+  reviews         VendorReview[]
+  favorites       VendorFavorite[]
+  inquiries       VendorInquiry[]
+  onboarding      VendorOnboarding?
+  analytics       VendorAnalytics[]
+  connectedEvents EventVendor[]
 
   @@map("vendors")
 }
@@ -646,6 +648,7 @@ model TenantInvitation {
   tenantId     String    @map("tenant_id") @db.Uuid
   email        String
   role         String
+  type         String    @default("team")
   token        String    @unique @db.VarChar(512)
   invitedBy    String?   @map("invited_by") @db.Uuid
   acceptedAt   DateTime? @map("accepted_at")
@@ -656,6 +659,18 @@ model TenantInvitation {
   inviter   User?  @relation("InvitedBy", fields: [invitedBy], references: [userId])
 
   @@map("tenant_invitations")
+}
+
+model EventVendor {
+  eventId     String   @map("event_id") @db.Uuid
+  vendorId    String   @map("vendor_id") @db.Uuid
+  connectedAt DateTime @default(now()) @map("connected_at") @db.Timestamptz
+
+  event  Event  @relation(fields: [eventId], references: [eventId], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendorId], references: [vendorId], onDelete: Cascade)
+
+  @@id([eventId, vendorId])
+  @@map("event_vendors")
 }
 
 model EmailOtp {
